@@ -1,0 +1,1 @@
+export { default as RewardsScreen } from './screens/RewardsScreen';
