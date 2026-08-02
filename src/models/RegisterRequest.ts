@@ -1,9 +1,31 @@
-import { UserRole } from "./Role";
+import { UserRole } from './Role';
+
+export interface UserRegisterRequest {
+
+  roNumber: string;
+
+  phoneNumber: string;
+
+  password: string;
+
+}
+
+export interface AdminRegisterRequest {
+
+  name: string;
+
+  phoneNumber: string;
+
+  password: string;
+
+}
 
 export interface RegisterRequest {
-  name: string;
-  roNumber: string;
-  phoneNumber: string;
-  password: string;
+
   role: UserRole;
+
+  user?: UserRegisterRequest;
+
+  admin?: AdminRegisterRequest;
+
 }

@@ -7,9 +7,10 @@ import {
 import {
   LandingScreen,
   LoginScreen,
-  RegisterScreen,
+  RegisterAdminScreen,
+  RegisterUserScreen,
   SplashScreen,
-} from '../../features/auth';
+} from '../../features/auth/screens';
 
 const Stack =
   createNativeStackNavigator();
@@ -17,9 +18,11 @@ const Stack =
 const AuthNavigator = () => {
   return (
     <Stack.Navigator
+      initialRouteName="Splash"
       screenOptions={{
         headerShown: false,
       }}>
+
       <Stack.Screen
         name="Splash"
         component={SplashScreen}
@@ -36,9 +39,15 @@ const AuthNavigator = () => {
       />
 
       <Stack.Screen
-        name="Register"
-        component={RegisterScreen}
+        name="RegisterUser"
+        component={RegisterUserScreen}
       />
+
+      <Stack.Screen
+        name="RegisterAdmin"
+        component={RegisterAdminScreen}
+      />
+
     </Stack.Navigator>
   );
 };
