@@ -6,113 +6,144 @@ import React, {
 import {
   Alert,
   ScrollView,
+  View,
 } from 'react-native';
 
-import { Button } from '../../../core/components';
-
-import { useAuth } from '../../../core/context';
-
-import { InspectionApi } from '../../../core/services/api';
-
-import { SectionHeader } from '../components';
-
-import { InspectionItemCard } from '../../inspection/components';
-
-import ScreenHeader from '../components/ScreenHeader';
+import {
+  useNavigation,
+} from '@react-navigation/native';
 
 import {
-  InspectionSubmissionItem,
-  InspectionTemplate,
+  Button,
+} from '../../../core/components';
+
+import {
+  useAuth,
+} from '../../../core/context';
+
+import {
+  MasterApi,
+} from '../../../core/services/api';
+
+import {
+  OutletHierarchy,
 } from '../../../models';
+
+import {
+  SectionHeader,
+} from '../components';
+
+import ScreenHeader from '../components/ScreenHeader';
 
 import styles from './UserHomeScreen.styles';
 
 const UserHomeScreen = () => {
-  const { user } = useAuth();
 
-  const [template, setTemplate] =
-    useState<InspectionTemplate>();
+  const navigation =
+    useNavigation<any>();
 
-  const [responses, setResponses] =
-    useState<
-      Record<
-        string,
-        InspectionSubmissionItem
-      >
-    >({});
+  const { user } =
+    useAuth();
+
+  const [
+    hierarchy,
+    setHierarchy,
+  ] = useState<OutletHierarchy | null>(
+    null,
+  );
+
+  const [
+    loadingOutlet,
+    setLoadingOutlet,
+  ] = useState(false);
+
+  const loadOutlet = async () => {
+
+    if (!user?.roNumber) {
+      return;
+    }
+
+    try {
+
+      setLoadingOutlet(true);
+
+      const result =
+        await MasterApi.getOutletHierarchy(
+          user.roNumber,
+        );
+
+      if (result) {
+        setHierarchy(result);
+      }
+
+    } catch {
+
+      Alert.alert(
+        'Outlet',
+        'Unable to load outlet details.',
+      );
+
+    } finally {
+
+      setLoadingOutlet(false);
+
+    }
+  };
 
   useEffect(() => {
-    loadInspection();
-  }, []);
+    loadOutlet();
+  }, [user?.roNumber]);
 
-  const loadInspection =
-    async () => {
-      const inspection =
-        await InspectionApi.getDailyInspection();
+  const startInspection = () => {
 
-      setTemplate(inspection);
-    };
+    navigation.navigate(
+      'Inspection',
+    );
 
-  const updateItem = (
-    id: string,
-    values: Partial<InspectionSubmissionItem>,
-  ) => {
-    setResponses(previous => ({
-      ...previous,
-
-      [id]: {
-        ...previous[id],
-        itemId: id,
-        ...values,
-      },
-    }));
   };
 
   return (
+
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={
+        styles.content
+      }
       showsVerticalScrollIndicator={false}>
 
       <ScreenHeader
-        title={`Good Morning, ${user?.name ?? ''}`}
-        subtitle={
+        title={
+          hierarchy?.outlet.outletName ??
           user?.roNumber ??
           'Outlet'
         }
+        subtitle="Daily Inspection"
       />
 
       <SectionHeader
         title="Today's Inspection"
-        subtitle="Complete today's mandatory checklist."
+        subtitle="Complete each inspection task one by one."
       />
 
-      {template?.items.map(item => (
-        <InspectionItemCard
-          key={item.id}
-          item={item}
-          imageUri={
-            responses[item.id]
-              ?.imageUri
+      <View
+        style={{
+          marginTop: 16,
+        }}>
+
+        <Button
+          title={
+            loadingOutlet
+              ? 'Loading...'
+              : 'Start Inspection'
           }
-          onUpload={() =>
-            Alert.alert(
-              'Upload',
-              'Camera/Image Picker coming next.',
-            )
+          loading={loadingOutlet}
+          onPress={
+            startInspection
           }
         />
-      ))}
 
-      <Button
-        title="Submit Inspection"
-        onPress={() =>
-          Alert.alert(
-            'Inspection',
-            'Submission API will be connected later.',
-          )
-        }
-      />
+      </View>
+
     </ScrollView>
   );
 };
