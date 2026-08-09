@@ -13,9 +13,8 @@ import {
 
 export default function useInspectionFlow(
   tasks: InspectionTask[],
-  roNumber?: string,
+  roId?: string,
 ) {
-
   const [
     currentIndex,
     setCurrentIndex,
@@ -33,19 +32,17 @@ export default function useInspectionFlow(
     setSaving,
   ] = useState(false);
 
-  //-------------------------------------
-
   const currentTask =
     useMemo(
       () =>
-        tasks[currentIndex],
+        tasks[
+          currentIndex
+        ],
       [
         tasks,
         currentIndex,
       ],
     );
-
-  //-------------------------------------
 
   const progress =
     tasks.length === 0
@@ -53,94 +50,101 @@ export default function useInspectionFlow(
       : (currentIndex + 1) /
         tasks.length;
 
-  //-------------------------------------
-
   const completed =
-    Object.keys(images).length;
+    Object.keys(
+      images,
+    ).length;
 
-  //-------------------------------------
+  /**
+   * Upload the current inspection item.
+   *
+   * This immediately calls the Upload API.
+   *
+   * Inspection completion is NOT required.
+   */
+  const uploadImage =
+    async (
+      uri: string,
+      userId?: string,
+      userName?: string,
+    ) => {
+      if (
+        !currentTask ||
+        !roId
+      ) {
+        return false;
+      }
 
-  const uploadImage = async (
-    uri: string,
-  ) => {
+      try {
+        setSaving(true);
 
-    if (
-      !currentTask ||
-      !roNumber
-    ) {
-      return false;
-    }
+        const upload =
+          await InspectionUploadApi.uploadImage(
+            {
+              roId,
 
-    try {
+              inspectionItem:
+                currentTask.id,
 
-      setSaving(true);
+              imageUri:
+                uri,
 
-      await InspectionUploadApi.uploadImage({
-        roNumber,
-        itemId:
-          currentTask.id,
-        imageUri: uri,
-      });
+              userId,
 
-      setImages(previous => ({
-        ...previous,
-        [currentTask.id]: uri,
-      }));
+              userName,
+            },
+          );
 
-      return true;
+        /**
+         * Keep the local camera URI only
+         * for the current inspection UI.
+         */
+        setImages(
+          previous => ({
+            ...previous,
 
-    } finally {
+            [currentTask.id]:
+              upload.imageUri,
+          }),
+        );
 
-      setSaving(false);
-
-    }
-  };
-
-  //-------------------------------------
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    };
 
   const next = () => {
-
     if (
       currentIndex <
       tasks.length - 1
     ) {
-
       setCurrentIndex(
         previous =>
           previous + 1,
       );
-
     }
-
   };
 
-  //-------------------------------------
-
   const previous = () => {
-
     if (
       currentIndex > 0
     ) {
-
       setCurrentIndex(
         previous =>
           previous - 1,
       );
-
     }
-
   };
 
-  //-------------------------------------
-
   const isLastStep =
+    tasks.length > 0 &&
     currentIndex ===
-    tasks.length - 1;
-
-  //-------------------------------------
+      tasks.length - 1;
 
   return {
-
     currentIndex,
 
     currentTask,

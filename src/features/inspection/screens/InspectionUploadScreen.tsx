@@ -85,7 +85,9 @@ const InspectionUploadScreen = ({
   //-------------------------------------
 
   useEffect(() => {
+
     loadTasks();
+
   }, []);
 
   //-------------------------------------
@@ -98,9 +100,12 @@ const InspectionUploadScreen = ({
         setLoading(true);
 
         const result =
-          await InspectionTaskApi.getTasks();
+          await InspectionTaskApi
+            .getTasks();
 
-        setTasks(result);
+        setTasks(
+          result,
+        );
 
       } catch {
 
@@ -110,8 +115,9 @@ const InspectionUploadScreen = ({
           [
             {
               text: 'Go Back',
-              onPress: () =>
-                navigation.goBack(),
+              onPress:
+                () =>
+                  navigation.goBack(),
             },
           ],
         );
@@ -121,30 +127,20 @@ const InspectionUploadScreen = ({
         setLoading(false);
 
       }
-
     };
 
   //-------------------------------------
 
   const {
     currentTask,
-
     currentIndex,
-
     progress,
-
     isLastStep,
-
     next,
-
     previous,
-
     uploadImage,
-
     saving,
-
     images,
-
   } =
     useInspectionFlow(
       tasks,
@@ -160,7 +156,9 @@ const InspectionUploadScreen = ({
     }
 
     setCapturedImage(
-      images[currentTask.id],
+      images[
+        currentTask.id
+      ],
     );
 
   }, [
@@ -170,71 +168,49 @@ const InspectionUploadScreen = ({
 
   //-------------------------------------
 
-  const openCamera =
-    async () => {
+  const openCamera = async () => {
+  const options: CameraOptions = {
+    mediaType: 'photo',
+    cameraType: 'back',
+    quality: 0.8,
+    saveToPhotos: false,
+  };
 
-      const options: CameraOptions = {
-        mediaType: 'photo',
-        cameraType: 'back',
-        quality: 0.8,
-        saveToPhotos: false,
-      };
+  const result = await launchCamera(options);
 
-      const result =
-        await launchCamera(
-          options,
-        );
+  if (result.didCancel) {
+    return;
+  }
 
-      if (
-        result.didCancel
-      ) {
-        return;
-      }
+  if (result.errorCode) {
+    Alert.alert(
+      'Camera',
+      result.errorMessage ?? 'Unable to open camera.',
+    );
+    return;
+  }
 
-      if (
-        result.errorCode
-      ) {
+  const uri = result.assets?.[0]?.uri;
 
-        Alert.alert(
-          'Camera',
-          result.errorMessage ??
-            'Unable to open camera.',
-        );
+  if (!uri) {
+    Alert.alert(
+      'Camera',
+      'No image was captured.',
+    );
+    return;
+  }
 
-        return;
-      }
-
-      const uri =
-        result.assets?.[0]?.uri;
-
-      if (!uri) {
-
-        Alert.alert(
-          'Camera',
-          'No image was captured.',
-        );
-
-        return;
-      }
-
-      /*
-       * IMPORTANT:
-       *
-       * We only store the captured
-       * image in temporary screen
-       * state here.
-       *
-       * It is NOT uploaded yet.
-       *
-       * The user must press ✓.
-       */
-      setCapturedImage(uri);
-    };
+  setCapturedImage(uri);
+};
 
   //-------------------------------------
 
   const retakePhoto =
     () => {
+
+      if (saving) {
+        return;
+      }
 
       setCapturedImage(
         undefined,
@@ -249,39 +225,50 @@ const InspectionUploadScreen = ({
     async () => {
 
       if (
-        !capturedImage
+        !capturedImage ||
+        saving
       ) {
         return;
       }
 
       const success =
         await uploadImage(
+
           capturedImage,
+
+          user?.phoneNumber ??
+            user?.roNumber,
+
+          user?.name,
+
         );
 
       if (!success) {
 
         Alert.alert(
           'Upload',
-          'Unable to save the image.',
+          'Unable to save the image. Please try again.',
         );
 
         return;
       }
 
       /*
-       * After confirmation,
-       * move to the next inspection
-       * item.
+       * IMPORTANT:
+       *
+       * The image has now been persisted
+       * through the Upload API.
        */
+
       if (isLastStep) {
 
         Alert.alert(
-          'Inspection',
-          'All inspection photos have been saved.',
+          'Inspection Complete',
+          'All inspection photos have been uploaded successfully.',
           [
             {
-              text: 'OK',
+              text: 'Done',
+
               onPress: () =>
                 navigation.popToTop(),
             },
@@ -302,6 +289,10 @@ const InspectionUploadScreen = ({
 
   const handleBack =
     () => {
+
+      if (saving) {
+        return;
+      }
 
       if (
         capturedImage
@@ -331,6 +322,7 @@ const InspectionUploadScreen = ({
   if (loading) {
 
     return (
+
       <View
         style={{
           flex: 1,
@@ -353,6 +345,7 @@ const InspectionUploadScreen = ({
   if (!tasks.length) {
 
     return (
+
       <View
         style={{
           flex: 1,
@@ -427,6 +420,7 @@ const InspectionUploadScreen = ({
       </Text>
 
       {currentTask.image && (
+
         <Image
           source={
             currentTask.image
@@ -435,6 +429,7 @@ const InspectionUploadScreen = ({
             styles.referenceImage
           }
         />
+
       )}
 
       <View
@@ -446,7 +441,9 @@ const InspectionUploadScreen = ({
           instruction => (
 
             <Text
-              key={instruction}
+              key={
+                instruction
+              }
               style={
                 styles.point
               }>
@@ -474,9 +471,12 @@ const InspectionUploadScreen = ({
                 capturedImage,
             }}
             style={{
-              width: '100%',
-              height: 320,
-              borderRadius: 16,
+              width:
+                '100%',
+              height:
+                320,
+              borderRadius:
+                16,
             }}
             resizeMode="cover"
           />
@@ -485,25 +485,34 @@ const InspectionUploadScreen = ({
             style={{
               position:
                 'absolute',
-              bottom: 16,
-              left: 0,
-              right: 0,
+              bottom:
+                16,
+              left:
+                0,
+              right:
+                0,
               flexDirection:
                 'row',
               justifyContent:
                 'center',
-              gap: 24,
+              gap:
+                24,
             }}>
 
             <TouchableOpacity
               onPress={
                 retakePhoto
               }
-              disabled={saving}
+              disabled={
+                saving
+              }
               style={{
-                width: 58,
-                height: 58,
-                borderRadius: 29,
+                width:
+                  58,
+                height:
+                  58,
+                borderRadius:
+                  29,
                 backgroundColor:
                   '#EF4444',
                 alignItems:
@@ -514,10 +523,14 @@ const InspectionUploadScreen = ({
 
               <Text
                 style={{
-                  color: '#FFFFFF',
-                  fontSize: 32,
-                  lineHeight: 34,
-                  fontWeight: '600',
+                  color:
+                    '#FFFFFF',
+                  fontSize:
+                    32,
+                  lineHeight:
+                    34,
+                  fontWeight:
+                    '600',
                 }}>
 
                 ×
@@ -530,11 +543,16 @@ const InspectionUploadScreen = ({
               onPress={
                 confirmPhoto
               }
-              disabled={saving}
+              disabled={
+                saving
+              }
               style={{
-                width: 58,
-                height: 58,
-                borderRadius: 29,
+                width:
+                  58,
+                height:
+                  58,
+                borderRadius:
+                  29,
                 backgroundColor:
                   '#22C55E',
                 alignItems:
@@ -545,10 +563,14 @@ const InspectionUploadScreen = ({
 
               <Text
                 style={{
-                  color: '#FFFFFF',
-                  fontSize: 30,
-                  lineHeight: 34,
-                  fontWeight: '700',
+                  color:
+                    '#FFFFFF',
+                  fontSize:
+                    30,
+                  lineHeight:
+                    34,
+                  fontWeight:
+                    '700',
                 }}>
 
                 ✓
@@ -568,6 +590,9 @@ const InspectionUploadScreen = ({
           onPress={
             openCamera
           }
+          disabled={
+            saving
+          }
         />
 
       )}
@@ -578,7 +603,11 @@ const InspectionUploadScreen = ({
         }>
 
         <Button
-          title="Back"
+          title={
+            currentIndex > 0
+              ? 'Back'
+              : 'Cancel'
+          }
           variant="outline"
           onPress={
             handleBack
@@ -588,18 +617,35 @@ const InspectionUploadScreen = ({
           }
         />
 
-        {!capturedImage && (
-          <Button
-            title="Cancel"
-            variant="outline"
-            onPress={() =>
-              navigation.goBack()
-            }
-            disabled={
-              saving
-            }
-          />
-        )}
+        {capturedImage &&
+          !isLastStep && (
+
+            <Button
+              title="Confirm with ✓"
+              onPress={
+                confirmPhoto
+              }
+              loading={
+                saving
+              }
+            />
+
+          )}
+
+        {capturedImage &&
+          isLastStep && (
+
+            <Button
+              title="Complete Inspection"
+              onPress={
+                confirmPhoto
+              }
+              loading={
+                saving
+              }
+            />
+
+          )}
 
       </View>
 

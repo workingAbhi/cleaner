@@ -6,3 +6,6 @@ export { default as InspectionTaskApi } from './inspectionTaskApi';
 export {
   default as InspectionUploadApi,
 } from './inspectionUploadApi';
+export {
+  default as ImageUrlGeneratorApi,
+} from './imageUrlGeneratorApi';
