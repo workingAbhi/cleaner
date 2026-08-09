@@ -3,3 +3,6 @@ export { default as MasterApi } from './masterApi';
 export { default as InspectionApi } from './inspectionApi';
 export { default as OtpApi } from './otpApi';
 export { default as InspectionTaskApi } from './inspectionTaskApi';
+export {
+  default as InspectionUploadApi,
+} from './inspectionUploadApi';

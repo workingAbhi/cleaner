@@ -1,11 +1,19 @@
-import { useMemo, useState } from 'react';
+import {
+  useMemo,
+  useState,
+} from 'react';
 
 import {
   InspectionTask,
 } from '../../../models';
 
+import {
+  InspectionUploadApi,
+} from '../../../core/services/api';
+
 export default function useInspectionFlow(
   tasks: InspectionTask[],
+  roNumber?: string,
 ) {
 
   const [
@@ -20,12 +28,21 @@ export default function useInspectionFlow(
     Record<string, string>
   >({});
 
+  const [
+    saving,
+    setSaving,
+  ] = useState(false);
+
   //-------------------------------------
 
   const currentTask =
     useMemo(
-      () => tasks[currentIndex],
-      [tasks, currentIndex],
+      () =>
+        tasks[currentIndex],
+      [
+        tasks,
+        currentIndex,
+      ],
     );
 
   //-------------------------------------
@@ -43,19 +60,40 @@ export default function useInspectionFlow(
 
   //-------------------------------------
 
-  const uploadImage = (
+  const uploadImage = async (
     uri: string,
   ) => {
 
-    if (!currentTask) {
-      return;
+    if (
+      !currentTask ||
+      !roNumber
+    ) {
+      return false;
     }
 
-    setImages(previous => ({
-      ...previous,
-      [currentTask.id]: uri,
-    }));
+    try {
 
+      setSaving(true);
+
+      await InspectionUploadApi.uploadImage({
+        roNumber,
+        itemId:
+          currentTask.id,
+        imageUri: uri,
+      });
+
+      setImages(previous => ({
+        ...previous,
+        [currentTask.id]: uri,
+      }));
+
+      return true;
+
+    } finally {
+
+      setSaving(false);
+
+    }
   };
 
   //-------------------------------------
@@ -80,7 +118,9 @@ export default function useInspectionFlow(
 
   const previous = () => {
 
-    if (currentIndex > 0) {
+    if (
+      currentIndex > 0
+    ) {
 
       setCurrentIndex(
         previous =>
@@ -111,6 +151,8 @@ export default function useInspectionFlow(
 
     images,
 
+    saving,
+
     uploadImage,
 
     next,
@@ -118,7 +160,5 @@ export default function useInspectionFlow(
     previous,
 
     isLastStep,
-
   };
-
 }

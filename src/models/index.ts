@@ -23,3 +23,4 @@ export * from './OtpRequest';
 
 export * from './OtpVerifyRequest';
 export * from './InspectionTask';
+export * from './InspectionUpload';
