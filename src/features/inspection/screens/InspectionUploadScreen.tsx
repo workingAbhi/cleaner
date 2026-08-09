@@ -168,40 +168,58 @@ const InspectionUploadScreen = ({
 
   //-------------------------------------
 
-  const openCamera = async () => {
-  const options: CameraOptions = {
-    mediaType: 'photo',
-    cameraType: 'back',
-    quality: 0.8,
-    saveToPhotos: false,
-  };
+  const openCamera =
+    async () => {
 
-  const result = await launchCamera(options);
+      const options:
+        CameraOptions = {
+        mediaType: 'photo',
+        cameraType: 'back',
+        quality: 0.8,
+        saveToPhotos: false,
+      };
 
-  if (result.didCancel) {
-    return;
-  }
+      const result =
+        await launchCamera(
+          options,
+        );
 
-  if (result.errorCode) {
-    Alert.alert(
-      'Camera',
-      result.errorMessage ?? 'Unable to open camera.',
-    );
-    return;
-  }
+      if (
+        result.didCancel
+      ) {
+        return;
+      }
 
-  const uri = result.assets?.[0]?.uri;
+      if (
+        result.errorCode
+      ) {
 
-  if (!uri) {
-    Alert.alert(
-      'Camera',
-      'No image was captured.',
-    );
-    return;
-  }
+        Alert.alert(
+          'Camera',
+          result.errorMessage ??
+            'Unable to open camera.',
+        );
 
-  setCapturedImage(uri);
-};
+        return;
+      }
+
+      const uri =
+        result.assets?.[0]?.uri;
+
+      if (!uri) {
+
+        Alert.alert(
+          'Camera',
+          'No image was captured.',
+        );
+
+        return;
+      }
+
+      setCapturedImage(
+        uri,
+      );
+    };
 
   //-------------------------------------
 
@@ -253,13 +271,6 @@ const InspectionUploadScreen = ({
         return;
       }
 
-      /*
-       * IMPORTANT:
-       *
-       * The image has now been persisted
-       * through the Upload API.
-       */
-
       if (isLastStep) {
 
         Alert.alert(
@@ -269,8 +280,9 @@ const InspectionUploadScreen = ({
             {
               text: 'Done',
 
-              onPress: () =>
-                navigation.popToTop(),
+              onPress:
+                () =>
+                  navigation.popToTop(),
             },
           ],
         );
@@ -281,6 +293,29 @@ const InspectionUploadScreen = ({
       setCapturedImage(
         undefined,
       );
+
+      next();
+    };
+
+  //-------------------------------------
+
+  const skipInspection =
+    () => {
+
+      if (saving) {
+        return;
+      }
+
+      setCapturedImage(
+        undefined,
+      );
+
+      if (isLastStep) {
+
+        navigation.popToTop();
+
+        return;
+      }
 
       next();
     };
@@ -324,13 +359,9 @@ const InspectionUploadScreen = ({
     return (
 
       <View
-        style={{
-          flex: 1,
-          justifyContent:
-            'center',
-          alignItems:
-            'center',
-        }}>
+        style={
+          styles.loadingContainer
+        }>
 
         <Text>
           Loading inspection...
@@ -347,19 +378,14 @@ const InspectionUploadScreen = ({
     return (
 
       <View
-        style={{
-          flex: 1,
-          justifyContent:
-            'center',
-          padding: 24,
-        }}>
+        style={
+          styles.emptyContainer
+        }>
 
         <Text
-          style={{
-            textAlign:
-              'center',
-            marginBottom: 20,
-          }}>
+          style={
+            styles.emptyText
+          }>
 
           No inspection tasks
           are available.
@@ -460,44 +486,25 @@ const InspectionUploadScreen = ({
       {capturedImage ? (
 
         <View
-          style={{
-            position:
-              'relative',
-          }}>
+          style={
+            styles.capturedImageContainer
+          }>
 
           <Image
             source={{
               uri:
                 capturedImage,
             }}
-            style={{
-              width:
-                '100%',
-              height:
-                320,
-              borderRadius:
-                16,
-            }}
+            style={
+              styles.capturedImage
+            }
             resizeMode="cover"
           />
 
           <View
-            style={{
-              position:
-                'absolute',
-              bottom:
-                16,
-              left:
-                0,
-              right:
-                0,
-              flexDirection:
-                'row',
-              justifyContent:
-                'center',
-              gap:
-                24,
-            }}>
+            style={
+              styles.imageActions
+            }>
 
             <TouchableOpacity
               onPress={
@@ -506,32 +513,14 @@ const InspectionUploadScreen = ({
               disabled={
                 saving
               }
-              style={{
-                width:
-                  58,
-                height:
-                  58,
-                borderRadius:
-                  29,
-                backgroundColor:
-                  '#EF4444',
-                alignItems:
-                  'center',
-                justifyContent:
-                  'center',
-              }}>
+              style={
+                styles.retakeButton
+              }>
 
               <Text
-                style={{
-                  color:
-                    '#FFFFFF',
-                  fontSize:
-                    32,
-                  lineHeight:
-                    34,
-                  fontWeight:
-                    '600',
-                }}>
+                style={
+                  styles.imageActionText
+                }>
 
                 ×
 
@@ -546,32 +535,14 @@ const InspectionUploadScreen = ({
               disabled={
                 saving
               }
-              style={{
-                width:
-                  58,
-                height:
-                  58,
-                borderRadius:
-                  29,
-                backgroundColor:
-                  '#22C55E',
-                alignItems:
-                  'center',
-                justifyContent:
-                  'center',
-              }}>
+              style={
+                styles.confirmButton
+              }>
 
               <Text
-                style={{
-                  color:
-                    '#FFFFFF',
-                  fontSize:
-                    30,
-                  lineHeight:
-                    34,
-                  fontWeight:
-                    '700',
-                }}>
+                style={
+                  styles.imageActionText
+                }>
 
                 ✓
 
@@ -597,53 +568,100 @@ const InspectionUploadScreen = ({
 
       )}
 
+      {/* ---------------------------------
+          BOTTOM ACTIONS
+          --------------------------------- */}
+
       <View
         style={
           styles.footer
         }>
 
-        <Button
-          title={
-            currentIndex > 0
-              ? 'Back'
-              : 'Cancel'
-          }
-          variant="outline"
-          onPress={
-            handleBack
-          }
-          disabled={
-            saving
-          }
-        />
+        <View
+          style={
+            styles.footerButton
+          }>
+
+          <Button
+            title={
+              currentIndex > 0
+                ? 'Back'
+                : 'Cancel'
+            }
+            variant="outline"
+            onPress={
+              handleBack
+            }
+            disabled={
+              saving
+            }
+          />
+
+        </View>
+
+        {!capturedImage && (
+
+          <View
+            style={
+              styles.footerButton
+            }>
+
+            <Button
+              title="Skip"
+              variant="outline"
+              onPress={
+                skipInspection
+              }
+              disabled={
+                saving
+              }
+            />
+
+          </View>
+
+        )}
 
         {capturedImage &&
           !isLastStep && (
 
-            <Button
-              title="Confirm with ✓"
-              onPress={
-                confirmPhoto
-              }
-              loading={
-                saving
-              }
-            />
+            <View
+              style={
+                styles.footerButton
+              }>
+
+              <Button
+                title="Confirm ✓"
+                onPress={
+                  confirmPhoto
+                }
+                loading={
+                  saving
+                }
+              />
+
+            </View>
 
           )}
 
         {capturedImage &&
           isLastStep && (
 
-            <Button
-              title="Complete Inspection"
-              onPress={
-                confirmPhoto
-              }
-              loading={
-                saving
-              }
-            />
+            <View
+              style={
+                styles.footerButton
+              }>
+
+              <Button
+                title="Complete"
+                onPress={
+                  confirmPhoto
+                }
+                loading={
+                  saving
+                }
+              />
+
+            </View>
 
           )}
 
