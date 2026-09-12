@@ -20,11 +20,15 @@ import {
 
 import InspectionNavigator from '../../features/inspection/navigation/InspectionNavigator';
 
+import {
+  UserHomeStackParamList,
+} from '../types';
+
 const Tab =
   createBottomTabNavigator();
 
 const HomeStack =
-  createNativeStackNavigator();
+  createNativeStackNavigator<UserHomeStackParamList>();
 
 const HomeNavigator = () => {
   return (

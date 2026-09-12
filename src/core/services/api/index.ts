@@ -7,5 +7,8 @@ export {
   default as InspectionUploadApi,
 } from './inspectionUploadApi';
 export {
+  default as InspectionAnalysisApi,
+} from './inspectionAnalysisApi';
+export {
   default as ImageUrlGeneratorApi,
 } from './imageUrlGeneratorApi';

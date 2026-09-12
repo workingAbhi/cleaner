@@ -1,156 +1,177 @@
 import React from 'react';
 
 import {
-    Alert,
-    ScrollView,
+  ScrollView,
+  Text,
+  View,
 } from 'react-native';
 
 import {
-    Button,
+  useFocusEffect,
+} from '@react-navigation/native';
+
+import {
+  Button,
 } from '../../../../core/components';
+
+import {
+  Colors,
+} from '../../../../core/theme';
+
+import {
+  InspectionPhotoCard,
+} from '../../../inspection/components';
 
 import useDashboard from '../hooks/useDashboard';
 
 import {
-    DashboardHeader,
-    FilterDropdown,
+  DashboardHeader,
+  FilterDropdown,
 } from '../components';
 
 import styles from './DashboardScreen.styles';
 
 const DashboardScreen = () => {
+  const dayOptions = [
+    { id: 'all', name: 'All time' },
+    { id: '1', name: 'Last 24 hours' },
+    { id: '7', name: 'Last 7 days' },
+    { id: '15', name: 'Last 15 days' },
+  ];
 
-    const dayOptions = [
-        {
-            id: '1',
-            name: 'Today',
-        },
-        {
-            id: '7',
-            name: 'Last 7 Days',
-        },
-        {
-            id: '15',
-            name: 'Last 15 Days',
-        },
-    ];
+  const {
+    territories,
+    salesAreas,
+    districts,
+    outlets,
+    territoryId,
+    salesAreaId,
+    districtId,
+    outletId,
+    days,
+    setDays,
+    setOutletId,
+    selectTerritory,
+    selectSalesArea,
+    selectDistrict,
+    clearFilters,
+    uploads,
+    analyses,
+    loading,
+    loadEvidence,
+    outletLabel,
+  } = useDashboard();
 
-    const {
+  useFocusEffect(
+    React.useCallback(() => {
+      loadEvidence();
+    }, [loadEvidence]),
+  );
 
-        territories,
-        salesAreas,
-        districts,
-        outlets,
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}>
 
-        territoryId,
-        salesAreaId,
-        districtId,
-        outletId,
+      <DashboardHeader />
 
-        days,
+      <FilterDropdown
+        label="Territory"
+        value={territoryId}
+        options={territories}
+        getValue={item => item.id}
+        getLabel={item => item.name}
+        onChange={selectTerritory}
+      />
 
-        setDays,
-        setOutletId,
+      {territoryId !== '' && (
+        <FilterDropdown
+          label="Sales Area"
+          value={salesAreaId}
+          options={salesAreas}
+          getValue={item => item.id}
+          getLabel={item => item.name}
+          onChange={selectSalesArea}
+        />
+      )}
 
-        selectTerritory,
-        selectSalesArea,
-        selectDistrict,
+      {salesAreaId !== '' && (
+        <FilterDropdown
+          label="District"
+          value={districtId}
+          options={districts}
+          getValue={item => item.id}
+          getLabel={item => item.name}
+          onChange={selectDistrict}
+        />
+      )}
 
-    } = useDashboard();
+      {districtId !== '' && (
+        <FilterDropdown
+          label="Outlet"
+          value={outletId}
+          options={outlets}
+          getValue={item => item.roNumber}
+          getLabel={item =>
+            `${item.roNumber} • ${item.outletName}`
+          }
+          onChange={setOutletId}
+        />
+      )}
 
-    return (
+      <FilterDropdown
+        label="Time Period"
+        value={days}
+        options={dayOptions}
+        getValue={item => item.id}
+        getLabel={item => item.name}
+        onChange={setDays}
+      />
 
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.content}
-            showsVerticalScrollIndicator={false}>
+      <View style={{ marginTop: 12 }}>
+        <Button
+          title="Clear filters"
+          variant="outline"
+          onPress={clearFilters}
+        />
+      </View>
 
-            <DashboardHeader />
+      <Text
+        style={{
+          marginTop: 24,
+          fontSize: 18,
+          fontWeight: '700',
+          color: Colors.text,
+        }}>
+        {outletId
+          ? `Photos · ${outletLabel(outletId)}`
+          : 'Photos · all ROs'}
+      </Text>
 
-            <FilterDropdown
-                label="Territory"
-                value={territoryId}
-                options={territories}
-                getValue={item => item.id}
-                getLabel={item => item.name}
-                onChange={selectTerritory}
-            />
+      <Text
+        style={{
+          marginTop: 6,
+          fontSize: 13,
+          color: Colors.textSecondary,
+        }}>
+        {loading
+          ? 'Loading inspection photos...'
+          : uploads.length === 0
+            ? 'No inspection photos in this filter.'
+            : `${uploads.length} photo${uploads.length === 1 ? '' : 's'}`}
+      </Text>
 
-            {territoryId !== '' && (
-
-                <FilterDropdown
-                    label="Sales Area"
-                    value={salesAreaId}
-                    options={salesAreas}
-                    getValue={item => item.id}
-                    getLabel={item => item.name}
-                    onChange={selectSalesArea}
-                />
-
-            )}
-
-            {salesAreaId !== '' && (
-
-                <FilterDropdown
-                    label="District"
-                    value={districtId}
-                    options={districts}
-                    getValue={item => item.id}
-                    getLabel={item => item.name}
-                    onChange={selectDistrict}
-                />
-
-            )}
-
-            {districtId !== '' && (
-
-                <FilterDropdown
-                    label="Outlet"
-                    value={outletId}
-                    options={outlets}
-                    getValue={item => item.roNumber}
-                    getLabel={item =>
-                        `${item.roNumber} • ${item.outletName}`
-                    }
-                    onChange={setOutletId}
-                />
-
-            )}
-
-            {outletId !== '' && (
-
-                <FilterDropdown
-                    label="Time Period"
-                    value={days}
-                    options={dayOptions}
-                    getValue={item => item.id}
-                    getLabel={item => item.name}
-                    onChange={setDays}
-                />
-
-            )}
-
-            {outletId !== '' && (
-
-                <Button
-
-                    title="View Report"
-
-                    onPress={() =>
-                        Alert.alert(
-                            'Reports',
-                            'Dashboard summary coming next pack.',
-                        )
-                    }
-
-                />
-
-            )}
-
-        </ScrollView>
-
-    );
-
+      {uploads.map(upload => (
+        <InspectionPhotoCard
+          key={upload.id}
+          upload={upload}
+          analysis={analyses[upload.id]}
+          outletLabel={outletLabel(upload.roId)}
+        />
+      ))}
+    </ScrollView>
+  );
 };
 
 export default DashboardScreen;

@@ -6,9 +6,7 @@ import React, {
 
 import {
   Alert,
-  Image,
   ScrollView,
-  Text,
   View,
 } from 'react-native';
 
@@ -16,6 +14,10 @@ import {
   useFocusEffect,
   useNavigation,
 } from '@react-navigation/native';
+
+import {
+  NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
 
 import {
   Button,
@@ -26,17 +28,31 @@ import {
 } from '../../../core/context';
 
 import {
+  isSupabaseConfigured,
+} from '../../../core/config/appConfig';
+
+import {
   MasterApi,
   InspectionUploadApi,
+  InspectionAnalysisApi,
 } from '../../../core/services/api';
+
+import {
+  UserHomeStackParamList,
+} from '../../../core/navigation/types';
 
 import {
   InspectionImageUpload,
 } from '../../../models/InspectionUpload';
 
 import {
+  AiAnalysis,
   OutletHierarchy,
 } from '../../../models';
+
+import {
+  InspectionPhotoCard,
+} from '../../inspection/components';
 
 import {
   SectionHeader,
@@ -48,23 +64,15 @@ import ScreenHeader
 import styles
   from './UserHomeScreen.styles';
 
-/**
- * Mock image used when the GET API returns
- * a mock image URL.
- *
- * The actual backend URL does not exist yet,
- * so all returned mock URLs are displayed
- * using this local image.
- */
-const MOCK_DISPLAY_IMAGE =
-  require(
-    '../../../data/mockImageInGET_API_toshowin_userpage.png',
-  );
-
 const UserHomeScreen = () => {
 
   const navigation =
-    useNavigation<any>();
+    useNavigation<
+      NativeStackNavigationProp<
+        UserHomeStackParamList,
+        'UserHome'
+      >
+    >();
 
   const { user } =
     useAuth();
@@ -82,6 +90,13 @@ const UserHomeScreen = () => {
   ] = useState<
     InspectionImageUpload[]
   >([]);
+
+  const [
+    analyses,
+    setAnalyses,
+  ] = useState<
+    Record<string, AiAnalysis>
+  >({});
 
   const [
     loadingOutlet,
@@ -137,30 +152,36 @@ const UserHomeScreen = () => {
    * -----------------------------------------
    */
   const loadImages =
-    async () => {
+    async (
+      showLoader = true,
+    ) => {
       if (!user?.roNumber) {
         return;
       }
 
       try {
-        setLoadingImages(
-          true,
-        );
+        if (showLoader) {
+          setLoadingImages(
+            true,
+          );
+        }
 
-        /**
-         * IMPORTANT:
-         *
-         * Fetch by RO ID.
-         *
-         * NOT by user ID.
-         */
         const result =
           await InspectionUploadApi.getImagesByRoId(
             user.roNumber,
           );
 
+        const latest =
+          await InspectionAnalysisApi.getLatestByRoId(
+            user.roNumber,
+          );
+
         setUploads(
           result,
+        );
+
+        setAnalyses(
+          latest,
         );
       } catch {
         Alert.alert(
@@ -168,9 +189,11 @@ const UserHomeScreen = () => {
           'Unable to load uploaded images.',
         );
       } finally {
-        setLoadingImages(
-          false,
-        );
+        if (showLoader) {
+          setLoadingImages(
+            false,
+          );
+        }
       }
     };
 
@@ -183,34 +206,21 @@ const UserHomeScreen = () => {
     user?.roNumber,
   ]);
 
-  /**
-   * Load images when RO changes.
-   */
-  useEffect(() => {
-    loadImages();
-  }, [
-    user?.roNumber,
-  ]);
-
-  /**
-   * IMPORTANT:
-   *
-   * When user comes back from the
-   * inspection screen, fetch again.
-   *
-   * This means:
-   *
-   * Upload
-   * ↓
-   * Home
-   * ↓
-   * GET API
-   * ↓
-   * show latest images
-   */
   useFocusEffect(
     useCallback(() => {
-      loadImages();
+      loadImages(true);
+
+      if (!isSupabaseConfigured()) {
+        return;
+      }
+
+      const timer = setInterval(() => {
+        loadImages(false);
+      }, 4000);
+
+      return () => {
+        clearInterval(timer);
+      };
     }, [
       user?.roNumber,
     ]),
@@ -289,201 +299,79 @@ const UserHomeScreen = () => {
 
         {uploads.map(
           upload => (
-            <View
-              key={
-                upload.id
-              }
-              style={{
-                marginTop:
-                  16,
-
-                backgroundColor:
-                  '#FFFFFF',
-
-                borderRadius:
-                  16,
-
-                padding:
-                  12,
-              }}>
-
-              <Text
-                style={{
-                  fontSize:
-                    16,
-
-                  fontWeight:
-                    '600',
-
-                  marginBottom:
-                    10,
-                }}>
-
-                {
-                  upload.inspectionItem
-                }
-
-              </Text>
-
-              {/*
-               * IMPORTANT:
-               *
-               * We intentionally DO NOT
-               * display upload.imageUri.
-               *
-               * The GET API returned
-               * upload.link.
-               *
-               * Since the URL is mocked,
-               * map it to our local mock image.
-               */}
-              <Image
-                source={
-                  MOCK_DISPLAY_IMAGE
-                }
-                style={{
-                  width:
-                    '100%',
-
-                  height:
-                    220,
-
-                  borderRadius:
-                    12,
-                }}
-                resizeMode="cover"
-              />
-
-              <Text
-                style={{
-                  marginTop:
-                    8,
-
-                  fontSize:
-                    12,
-
-                  color:
-                    '#777777',
-                }}>
-
-                Stored image:
-                {' '}
-                {
-                  upload.link
-                }
-
-              </Text>
+            <InspectionPhotoCard
+              key={upload.id}
+              upload={upload}
+              analysis={analyses[upload.id]}>
 
               <View
                 style={{
-                  flexDirection:
-                    'row',
-
-                  marginTop:
-                    12,
-
-                  gap:
-                    10,
+                  flexDirection: 'row',
+                  marginTop: 12,
+                  gap: 10,
                 }}>
 
-                <View
-                  style={{
-                    flex:
-                      1,
-                  }}>
-
+                <View style={{ flex: 1 }}>
                   <Button
                     title="Update"
                     variant="outline"
                     onPress={() =>
                       navigation.navigate(
                         'Inspection',
+                        {
+                          inspectionItemId:
+                            upload.inspectionItem,
+                        },
                       )
                     }
                   />
-
                 </View>
 
-                <View
-                  style={{
-                    flex:
-                      1,
-                  }}>
-
+                <View style={{ flex: 1 }}>
                   <Button
                     title="Delete"
                     variant="outline"
                     onPress={() => {
-
                       Alert.alert(
                         'Delete Photo',
                         'Delete this inspection photo?',
                         [
                           {
-                            text:
-                              'Cancel',
-
-                            style:
-                              'cancel',
+                            text: 'Cancel',
+                            style: 'cancel',
                           },
-
                           {
-                            text:
-                              'Delete',
+                            text: 'Delete',
+                            style: 'destructive',
+                            onPress: async () => {
+                              try {
+                                await InspectionUploadApi.deleteImage({
+                                  roId: user?.roNumber ?? '',
+                                  imageId: upload.id,
+                                  userId:
+                                    user?.phoneNumber ??
+                                    user?.roNumber,
+                                  userName: user?.name,
+                                });
 
-                            style:
-                              'destructive',
-
-                            onPress:
-                              async () => {
-
-                                try {
-
-                                  await InspectionUploadApi.deleteImage(
-                                    {
-                                      roId:
-                                        user?.roNumber ??
-                                        '',
-
-                                      imageId:
-                                        upload.id,
-
-                                      userId:
-                                        user?.phoneNumber ??
-                                        user?.roNumber,
-
-                                      userName:
-                                        user?.name,
-                                    },
-                                  );
-
-                                  await loadImages();
-
-                                } catch (
-                                error
-                                ) {
-
-                                  Alert.alert(
-                                    'Photo',
-
-                                    error instanceof
-                                      Error
-                                      ? error.message
-                                      : 'Unable to delete photo.',
-                                  );
-                                }
-                              },
+                                await loadImages();
+                              } catch (error) {
+                                Alert.alert(
+                                  'Photo',
+                                  error instanceof Error
+                                    ? error.message
+                                    : 'Unable to delete photo.',
+                                );
+                              }
+                            },
                           },
                         ],
                       );
                     }}
                   />
-
                 </View>
-
               </View>
-
-            </View>
+            </InspectionPhotoCard>
           ),
         )}
 

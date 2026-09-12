@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 
 import {
+  validatePasswordConfirmation,
+  validatePhoneNumber,
+} from '../../../core/constants/authValidation';
+import {
   AuthApi,
   OtpApi,
 } from '../../../core/services/api';
@@ -133,18 +137,16 @@ export default function useAdminRegister() {
   const sendPhoneOtp =
     async () => {
 
-      if (!form.phoneNumber.trim()) {
-
+      const phoneValidation = validatePhoneNumber(form.phoneNumber);
+      if (!phoneValidation.valid) {
         Alert.alert(
           'Phone Number',
-          'Please enter phone number.',
+          phoneValidation.error ?? 'Please enter a valid phone number.',
         );
-
         return;
-
       }
 
-      await OtpApi.sendOtp({
+      const result = await OtpApi.sendOtp({
 
         type:
           OtpType.PHONE,
@@ -158,7 +160,9 @@ export default function useAdminRegister() {
 
       Alert.alert(
         'Success',
-        'OTP sent successfully.',
+        result.devOtp
+          ? `OTP sent. Dev code: ${result.devOtp}`
+          : 'OTP sent successfully.',
       );
 
     };
@@ -176,6 +180,9 @@ export default function useAdminRegister() {
 
           otp:
             form.phoneOtp,
+
+          destination:
+            form.phoneNumber,
 
         });
 
@@ -199,7 +206,7 @@ export default function useAdminRegister() {
   const sendMasterOtp =
     async () => {
 
-      await OtpApi.sendOtp({
+      const result = await OtpApi.sendOtp({
 
         type:
           OtpType.MASTER,
@@ -210,7 +217,9 @@ export default function useAdminRegister() {
 
       Alert.alert(
         'Success',
-        'Master OTP sent.',
+        result.devOtp
+          ? `Master OTP sent to ${result.maskedPhone ?? 'owner'}. Dev code: ${result.devOtp}`
+          : `Master OTP sent to ${result.maskedPhone ?? 'owner'}.`,
       );
 
     };
@@ -252,72 +261,33 @@ export default function useAdminRegister() {
     async () => {
 
       if (!form.name.trim()) {
-
-        Alert.alert(
-          'Name',
-          'Please enter your name.',
-        );
-
+        Alert.alert('Name', 'Please enter your name.');
         return false;
-
       }
 
-      if (!form.phoneNumber.trim()) {
-
-        Alert.alert(
-          'Phone Number',
-          'Please enter phone number.',
-        );
-
+      const phoneValidation = validatePhoneNumber(form.phoneNumber);
+      if (!phoneValidation.valid) {
+        Alert.alert('Phone Number', phoneValidation.error ?? 'Please enter a valid phone number.');
         return false;
-
       }
 
-      if (!form.password) {
-
-        Alert.alert(
-          'Password',
-          'Please enter password.',
-        );
-
+      const passwordValidation = validatePasswordConfirmation(
+        form.password,
+        form.confirmPassword,
+      );
+      if (!passwordValidation.valid) {
+        Alert.alert('Password', passwordValidation.error ?? 'Please check your password.');
         return false;
-
-      }
-
-      if (
-        form.password !==
-        form.confirmPassword
-      ) {
-
-        Alert.alert(
-          'Password',
-          'Passwords do not match.',
-        );
-
-        return false;
-
       }
 
       if (!phoneVerified) {
-
-        Alert.alert(
-          'OTP',
-          'Please verify phone OTP.',
-        );
-
+        Alert.alert('OTP', 'Please verify phone OTP.');
         return false;
-
       }
 
       if (!masterVerified) {
-
-        Alert.alert(
-          'Master OTP',
-          'Please verify Master OTP.',
-        );
-
+        Alert.alert('Master OTP', 'Please verify Master OTP.');
         return false;
-
       }
 
       const request: AdminRegisterRequest = {

@@ -15,6 +15,7 @@ import {
   Button,
   Input,
 } from '../../../core/components';
+import { AuthValidationRules } from '../../../core/constants/authValidation';
 
 import {
   OutletInfoCard,
@@ -177,6 +178,8 @@ const RegisterUserScreen = ({
 
           secureTextEntry
 
+          maxLength={AuthValidationRules.MAX_PASSWORD_LENGTH}
+
           value={
             form.password
           }
@@ -195,6 +198,8 @@ const RegisterUserScreen = ({
           label="Confirm Password"
 
           secureTextEntry
+
+          maxLength={AuthValidationRules.MAX_PASSWORD_LENGTH}
 
           value={
             form.confirmPassword
@@ -220,6 +225,8 @@ const RegisterUserScreen = ({
           label="Phone Number"
 
           keyboardType="phone-pad"
+
+          maxLength={AuthValidationRules.MAX_PHONE_DIGITS}
 
           editable={
             !phoneVerified

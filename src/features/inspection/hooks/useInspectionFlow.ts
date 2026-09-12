@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -14,6 +15,7 @@ import {
 export default function useInspectionFlow(
   tasks: InspectionTask[],
   roId?: string,
+  initialTaskId?: string,
 ) {
   const [
     currentIndex,
@@ -31,6 +33,46 @@ export default function useInspectionFlow(
     saving,
     setSaving,
   ] = useState(false);
+
+  useEffect(() => {
+    if (!initialTaskId || tasks.length === 0) {
+      return;
+    }
+
+    const index = tasks.findIndex(
+      task => task.id === initialTaskId,
+    );
+
+    if (index >= 0) {
+      setCurrentIndex(index);
+    }
+  }, [initialTaskId, tasks]);
+
+  useEffect(() => {
+    const loadExisting = async () => {
+      if (!roId || tasks.length === 0) {
+        return;
+      }
+
+      const uploads =
+        await InspectionUploadApi.getImagesByRoId(
+          roId,
+        );
+
+      const nextImages: Record<string, string> = {};
+
+      uploads.forEach(upload => {
+        nextImages[upload.inspectionItem] = upload.link;
+      });
+
+      setImages(previous => ({
+        ...nextImages,
+        ...previous,
+      }));
+    };
+
+    loadExisting();
+  }, [roId, tasks]);
 
   const currentTask =
     useMemo(
@@ -78,6 +120,8 @@ export default function useInspectionFlow(
       try {
         setSaving(true);
 
+        console.log('[useInspectionFlow] Starting uploadImage for item:', currentTask.id, 'roId:', roId, 'uri:', uri);
+
         const upload =
           await InspectionUploadApi.uploadImage(
             {
@@ -95,6 +139,8 @@ export default function useInspectionFlow(
             },
           );
 
+        console.log('[useInspectionFlow] uploadImage succeeded:', upload);
+
         /**
          * Keep the local camera URI only
          * for the current inspection UI.
@@ -109,7 +155,8 @@ export default function useInspectionFlow(
         );
 
         return true;
-      } catch {
+      } catch (error) {
+        console.error('[useInspectionFlow] uploadImage failed with error:', error);
         return false;
       } finally {
         setSaving(false);

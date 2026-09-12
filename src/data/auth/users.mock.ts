@@ -244,6 +244,18 @@ const users: User[] = [
     createdAt: now,
     updatedAt: now,
   },
+
+  {
+    id: '21',
+    name: 'Bhagat Brothers',
+    phoneNumber: '8000000001',
+    password: '123456',
+    role: UserRole.USER,
+    roNumber: 'RO8001',
+    active: true,
+    createdAt: now,
+    updatedAt: now,
+  },
 ];
 
 export const UserStore = {

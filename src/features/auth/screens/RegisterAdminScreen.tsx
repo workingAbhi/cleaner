@@ -15,6 +15,7 @@ import {
   Button,
   Input,
 } from '../../../core/components';
+import { AuthValidationRules } from '../../../core/constants/authValidation';
 
 import {
   OtpVerificationField,
@@ -141,6 +142,8 @@ const RegisterAdminScreen = ({
 
           secureTextEntry
 
+          maxLength={AuthValidationRules.MAX_PASSWORD_LENGTH}
+
           value={form.password}
 
           onChangeText={text =>
@@ -157,6 +160,8 @@ const RegisterAdminScreen = ({
           label="Confirm Password"
 
           secureTextEntry
+
+          maxLength={AuthValidationRules.MAX_PASSWORD_LENGTH}
 
           value={form.confirmPassword}
 
@@ -180,6 +185,8 @@ const RegisterAdminScreen = ({
           label="Phone Number"
 
           keyboardType="phone-pad"
+
+          maxLength={AuthValidationRules.MAX_PHONE_DIGITS}
 
           editable={!phoneVerified}
 

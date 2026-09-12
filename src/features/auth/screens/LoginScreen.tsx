@@ -11,6 +11,7 @@ import {
   Card,
   Input,
 } from '../../../core/components';
+import { AuthValidationRules } from '../../../core/constants/authValidation';
 
 import { useAuth } from '../../../core/context';
 
@@ -34,10 +35,9 @@ const LoginScreen = () => {
 
       login(user);
     } catch (error) {
-      Alert.alert(
-        'Login Failed',
-        'Invalid phoneNumber or password.',
-      );
+      const message =
+        error instanceof Error ? error.message : 'Invalid phone number or password.';
+      Alert.alert('Login Failed', message);
     }
   };
 
@@ -47,12 +47,14 @@ const LoginScreen = () => {
         <Input
           label="Phone Number"
           keyboardType="phone-pad"
+          maxLength={AuthValidationRules.MAX_PHONE_DIGITS}
           value={phoneNumber}
           onChangeText={setPhoneNumber}
         />
 
         <Input
           label="Password"
+          maxLength={AuthValidationRules.MAX_PASSWORD_LENGTH}
           value={password}
           onChangeText={setPassword}
           secureTextEntry

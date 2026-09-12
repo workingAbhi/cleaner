@@ -158,4 +158,40 @@ export const outlets: Outlet[] = [
     location: 'Ara',
     active: true, inspectionImages: [],
   },
+
+  {
+    roNumber: 'RO8001',
+    outletName: 'BHAGAT BROTHERS',
+    districtId: 'D001',
+    location: 'Provided RO pics',
+    active: true, inspectionImages: [],
+  },
+  {
+    roNumber: 'RO8002',
+    outletName: 'CHANDRA HIGHWAY',
+    districtId: 'D001',
+    location: 'Provided RO pics',
+    active: true, inspectionImages: [],
+  },
+  {
+    roNumber: 'RO8003',
+    outletName: 'SARTHI FUEL STATION',
+    districtId: 'D001',
+    location: 'Provided RO pics',
+    active: true, inspectionImages: [],
+  },
+  {
+    roNumber: 'RO8004',
+    outletName: 'SRI RADHA FUEL',
+    districtId: 'D001',
+    location: 'Provided RO pics',
+    active: true, inspectionImages: [],
+  },
+  {
+    roNumber: 'RO8005',
+    outletName: 'VISHNU PETROLEUM',
+    districtId: 'D001',
+    location: 'Provided RO pics',
+    active: true, inspectionImages: [],
+  },
 ];

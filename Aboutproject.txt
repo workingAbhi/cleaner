@@ -1,0 +1,1648 @@
+# CLEANER — PROJECT MASTER CONTEXT
+
+You are now working on an existing React Native application called **Cleaner**.
+
+Your first responsibility is to understand the existing architecture, codebase, product requirements, and development decisions described below.
+
+Do NOT immediately rewrite or redesign the project.
+
+Treat this document as the baseline context for all future instructions I give you.
+
+---
+
+# 1. PROJECT OVERVIEW
+
+Project name:
+
+**Cleaner**
+
+Cleaner is an **Inspection & Compliance Platform**.
+
+It is NOT simply an AI washroom monitoring application.
+
+The core product allows users associated with a specific outlet/RO (Retail Outlet) to perform inspections, capture photos for individual inspection items, submit/retain inspection results, and later allow administrators to view inspection/compliance information.
+
+AI is one component of the overall platform and will be integrated later.
+
+For now, the priority is:
+
+1. Build the mobile UI.
+2. Build clean application architecture.
+3. Use mock/local APIs.
+4. Make the frontend independent of the eventual backend.
+5. Make backend integration easy later.
+
+---
+
+# 2. DEVELOPMENT ENVIRONMENT
+
+The project is being developed on:
+
+* macOS
+* React Native CLI
+* TypeScript
+* Android Studio
+* Android emulator
+* Physical Android device is also available
+* Visual Studio Code was previously used
+* Cursor is now being used for development
+
+The Android development environment is already working.
+
+Important environment decisions:
+
+* React Native CLI, NOT Expo.
+* TypeScript.
+* Functional components.
+* React Hooks.
+* React Navigation.
+* Context API where appropriate.
+* AsyncStorage for local persistence during mock/backend development.
+* Axios can be introduced later for real APIs.
+* React Native Safe Area Context is available/expected.
+
+Do not migrate the application to Expo unless explicitly instructed.
+
+---
+
+# 3. DEVELOPMENT PHILOSOPHY
+
+Follow this architecture:
+
+UI
+↓
+Service/API layer
+↓
+Mock/local implementation
+
+Later:
+
+UI
+↓
+Service/API layer
+↓
+Real backend
+
+The UI should NOT directly manipulate mock data/storage.
+
+For example:
+
+Screen
+→ InspectionUploadApi
+→ uploads.mock.ts
+→ AsyncStorage
+
+NOT:
+
+Screen
+→ AsyncStorage directly
+
+This separation is important because the mock API will eventually be replaced by a real backend.
+
+---
+
+# 4. IMPORTANT DEVELOPMENT RULE
+
+When I give you a new requirement:
+
+1. First understand the existing implementation.
+2. Inspect the relevant files.
+3. Reuse the existing architecture.
+4. Make the smallest clean change necessary.
+5. Do NOT unnecessarily redesign unrelated parts.
+6. Do NOT introduce unnecessary libraries.
+7. Do NOT duplicate existing functionality.
+8. Do NOT break existing working flows.
+9. Preserve existing naming conventions unless there is a strong reason to change them.
+10. If a change affects multiple files, identify all affected files before modifying them.
+
+I prefer incremental development over large rewrites.
+
+---
+
+# 5. PROJECT ARCHITECTURE
+
+The project broadly follows this structure:
+
+Cleaner/
+│
+├── App.tsx
+├── app.json
+├── android/
+├── ios/
+├── src/
+│
+├── core/
+│   ├── components/
+│   ├── config/
+│   ├── context/
+│   ├── services/
+│   │   └── api/
+│   ├── theme/
+│   └── constants/
+│
+├── data/
+│   ├── auth/
+│   ├── inspection/
+│   ├── master/
+│   └── ...
+│
+├── models/
+│
+└── features/
+├── auth/
+├── home/
+├── inspection/
+├── reports/
+└── ...
+
+The exact current structure in the repository is authoritative.
+
+Always inspect the actual repository before assuming a file exists.
+
+---
+
+# 6. USER ROLES
+
+There are currently two primary roles:
+
+* Admin
+* User
+
+Users are associated with an outlet using an RO number.
+
+The RO number is the important ownership boundary for outlet inspection images.
+
+---
+
+# 7. OUTLET HIERARCHY
+
+The master data hierarchy is:
+
+Territory
+↓
+Sales Area (SA)
+↓
+District
+↓
+Outlet
+↓
+User
+
+An outlet contains an:
+
+**RO Number / RO ID**
+
+The RO number is effectively the outlet identifier used by the current implementation.
+
+There is no need to introduce a separate outletId unless explicitly required.
+
+---
+
+# 8. AUTHENTICATION
+
+Current authentication is mock/local.
+
+The application has:
+
+* Login
+* Registration
+* OTP-related models/API
+* User context
+* Mock user data
+
+User registration/login information is currently represented through mock/local data.
+
+User registration supports:
+
+For User:
+
+* Name
+* Phone number
+* RO number
+* Password
+* Confirm password
+* Outlet hierarchy lookup
+
+For Admin:
+
+* Name
+* Phone number
+* Password
+
+Admin does not need outlet fields.
+
+The current user object contains information such as:
+
+* name
+* phoneNumber
+* roNumber
+* role
+
+Use the existing User model/context rather than creating another authentication state system.
+
+---
+
+# 9. MAIN APPLICATION FLOW
+
+The intended high-level flow is:
+
+Login
+↓
+Home / User Dashboard
+↓
+Today's Inspection
+↓
+Inspection items shown one-by-one
+↓
+Camera
+↓
+Photo preview
+↓
+Retake OR Confirm
+↓
+Upload API
+↓
+Image URL Generator API
+↓
+Image URL
+↓
+Persist image record
+↓
+Next inspection item
+↓
+Complete inspection
+
+Important:
+
+An inspection does NOT need to wait until the final "Complete Inspection" button before saving images.
+
+Every confirmed image must be persisted immediately.
+
+---
+
+# 10. INSPECTION FLOW
+
+Inspection is performed one item at a time.
+
+The user sees:
+
+* Current inspection item
+* Reference image
+* Instructions
+* Take Photo button
+
+After taking a photo:
+
+* Preview appears
+* ✕ = retake
+* ✓ = confirm/upload
+
+Once confirmed:
+
+1. Image is uploaded through the API layer.
+2. Image record is persisted immediately.
+3. User moves to the next inspection item.
+
+This is intentional.
+
+Do not change this into a "capture everything first, upload at the end" workflow.
+
+---
+
+# 11. PARTIAL INSPECTIONS MUST PERSIST
+
+This is extremely important.
+
+Example:
+
+User completes:
+
+Washroom → uploaded
+Basin → uploaded
+Parking → not uploaded
+
+Then user leaves the screen/application.
+
+The Washroom and Basin images MUST remain persisted.
+
+When the user returns/logs in again, those images must still be available.
+
+The system must support partial inspections.
+
+---
+
+# 12. INSPECTION IMAGES BELONG TO RO
+
+Images belong to the **RO**, not the individual user.
+
+This means:
+
+User A
+RO1001
+uploads Washroom image
+
+Then:
+
+User B
+RO1001
+logs in
+
+User B should be able to see the same RO1001 inspection images.
+
+Therefore:
+
+DO NOT use userId as the ownership key for inspection images.
+
+Use:
+
+roId / roNumber
+
+as the ownership boundary.
+
+---
+
+# 13. IMAGE DATA MODEL
+
+The current inspection image model is conceptually:
+
+```ts
+export interface InspectionImageUpload {
+  id: string;
+
+  roId: string;
+
+  inspectionItem: string;
+
+  link: string;
+
+  imageUri: string;
+
+  createdAt: string;
+
+  updatedAt: string;
+
+  createdBy?: string;
+
+  updatedBy?: string;
+
+  deletedAt?: string;
+
+  editingHistory: InspectionImageEditingHistory[];
+}
+```
+
+Editing history:
+
+```ts
+export type InspectionImageAction =
+  | 'CREATED'
+  | 'UPDATED'
+  | 'DELETED';
+
+export interface InspectionImageEditingHistory {
+  action: InspectionImageAction;
+  userId?: string;
+  userName?: string;
+  timestamp: string;
+  previousLink?: string;
+  newLink?: string;
+}
+```
+
+The request models include:
+
+```ts
+InspectionImageUploadRequest
+InspectionImageUpdateRequest
+InspectionImageDeleteRequest
+```
+
+Preserve this architecture.
+
+---
+
+# 14. IMAGE UPLOAD ARCHITECTURE
+
+Current intended architecture:
+
+InspectionUploadScreen
+↓
+InspectionUploadApi.uploadImage()
+↓
+ImageUrlGeneratorApi.generateUrl()
+↓
+mock generated URL
+↓
+Inspection upload record
+↓
+AsyncStorage
+
+The image URL generator is currently mocked.
+
+Example generated URLs:
+
+```text
+https://image1.png
+https://image2.png
+https://image3.png
+```
+
+These URLs are placeholders for the future backend.
+
+Do NOT treat these fake URLs as actual accessible images.
+
+---
+
+# 15. MOCK IMAGE DISPLAY
+
+Because the generated URLs are fake, the User Home currently maps returned mock image URLs to a local bundled image:
+
+```ts
+src/data/mockImageInGET_API_toshowin_userpage.png
+```
+
+Conceptually:
+
+Backend returns:
+
+```text
+https://image1.png
+```
+
+UI displays:
+
+```text
+mockImageInGET_API_toshowin_userpage.png
+```
+
+This is intentional until real image storage/backend is available.
+
+---
+
+# 16. PERSISTENCE
+
+Mock persistence uses:
+
+**AsyncStorage**
+
+The inspection upload mock database stores images per RO.
+
+The storage concept is:
+
+```text
+CLEANER_INSPECTION_RO_IDS
+
+CLEANER_INSPECTION_IMAGES_RO1001
+CLEANER_INSPECTION_IMAGES_RO1002
+...
+```
+
+Each RO gets its own persistent image collection.
+
+The mock database supports:
+
+* Add
+* Find
+* Get by RO
+* Update
+* Soft Delete
+
+Do NOT replace AsyncStorage with React state only.
+
+React state is only UI state.
+
+AsyncStorage is the current mock persistence layer.
+
+---
+
+# 17. IMPORTANT ASYNC RULE
+
+All AsyncStorage/database operations are asynchronous.
+
+Always use:
+
+```ts
+await
+```
+
+when calling:
+
+* getInspectionUploads
+* findInspectionUpload
+* addInspectionUpload
+* updateInspectionUpload
+* deleteInspectionUpload
+
+Do NOT accidentally treat async functions as synchronous.
+
+For example, this is WRONG:
+
+```ts
+const existing = getInspectionUploads(roId).find(...);
+```
+
+Correct:
+
+```ts
+const uploads = await getInspectionUploads(roId);
+
+const existing = uploads.find(...);
+```
+
+Likewise:
+
+```ts
+const existing = await findInspectionUpload(id);
+```
+
+and:
+
+```ts
+await addInspectionUpload(upload);
+```
+
+This was previously a source of runtime issues, so be careful when modifying this layer.
+
+---
+
+# 18. INSPECTION TASK MODEL
+
+Current inspection task model:
+
+```ts
+export interface InspectionTask {
+  id: string;
+  title: string;
+  image: any;
+  instructions: string[];
+}
+```
+
+Inspection tasks currently include items such as:
+
+* Washroom
+* Wash Basin
+* Mirror
+* Dustbin
+
+More compliance items are being added.
+
+The inspection task list should remain data-driven.
+
+The screen should NOT hard-code individual inspection items.
+
+---
+
+# 19. REQUIRED INSPECTION ITEMS
+
+The inspection checklist is being expanded to include:
+
+1. Washroom
+2. Wash Basin
+3. Mirror
+4. Dustbin
+5. Running water available 24x7
+6. Flush working, where provided
+7. Adequate illumination
+8. Functional door latch
+9. Functional, leak-free taps
+10. Exhaust fans
+11. Standardised signage in place
+12. Soap available
+13. Proper janitor on site
+14. "Cleaning in progress" board available and in use
+15. Gloves, masks and cleaning tools used by forecourt/cleaning staff
+16. Washroom maintained in hygienic condition at all times
+
+The exact task IDs should be stable and meaningful.
+
+Do not create random IDs every time.
+
+The inspection item ID is important because image records use it.
+
+---
+
+# 20. INSPECTION IMAGE OWNERSHIP
+
+Every image record must contain:
+
+```text
+roId
+inspectionItem
+```
+
+A typical image ID currently follows:
+
+```text
+${roId}-${inspectionItem}
+```
+
+This means one active image can exist for a particular inspection item for a particular RO.
+
+Example:
+
+```text
+RO1001-washroom
+RO1001-basin
+RO1001-mirror
+```
+
+If the same inspection item is uploaded again, the existing active image should be updated/replaced rather than creating multiple active records for the same item.
+
+---
+
+# 21. USER HOME
+
+The User Home screen currently:
+
+1. Gets the logged-in user's RO number.
+2. Gets outlet details through MasterApi.
+3. Gets inspection images using:
+
+```ts
+InspectionUploadApi.getImagesByRoId(user.roNumber)
+```
+
+4. Displays the uploaded inspection images.
+5. Allows View/Edit/Delete operations.
+
+Again:
+
+Images are fetched by RO, not user.
+
+---
+
+# 22. EDIT IMAGE
+
+Users should be able to update an inspection image.
+
+The intended flow is:
+
+User Home
+↓
+Select image
+↓
+Update
+↓
+Open inspection screen for THAT inspection item
+↓
+Show existing image
+↓
+Retake
+↓
+Confirm
+↓
+Update existing image record
+
+Important bug that existed:
+
+The User Home previously did:
+
+```ts
+navigation.navigate('Inspection')
+```
+
+without specifying which inspection item was being edited.
+
+Because the inspection flow defaults to index 0, this caused:
+
+Basin Update
+→ Washroom screen
+
+This is WRONG.
+
+Future implementation must ensure:
+
+Basin Update
+→ Basin inspection screen
+
+Mirror Update
+→ Mirror inspection screen
+
+etc.
+
+The selected inspection item must be passed through navigation or equivalent state.
+
+Do NOT simply navigate to the generic first inspection screen.
+
+---
+
+# 23. EDIT MODE
+
+The inspection screen should support two concepts:
+
+### Create mode
+
+User is performing a new inspection.
+
+### Edit mode
+
+User selected an existing uploaded image from User Home.
+
+In edit mode:
+
+* The relevant inspection task must open.
+* The existing image should be loaded.
+* Retake should replace that image.
+* Confirm should update the existing image record.
+* It should NOT create a second unrelated image record.
+
+Keep create and edit behavior cleanly separated.
+
+---
+
+# 24. IMAGE EDIT WINDOW
+
+The current intended rule is:
+
+Users can update/delete an image only within a configurable edit window.
+
+Default:
+
+**2 hours**
+
+Conceptually:
+
+```ts
+DEFAULT_EDIT_WINDOW_HOURS = 2
+```
+
+Configuration exists through:
+
+```ts
+AppConfig.imageEditWindowHours
+```
+
+The check is based on the image's `createdAt`.
+
+If the edit window has expired:
+
+```text
+The image editing window has expired.
+```
+
+should be shown.
+
+Do NOT silently remove this business rule.
+
+If I later tell you that the edit window should change, update the configuration/logic accordingly.
+
+---
+
+# 25. DELETE BEHAVIOR
+
+Delete is a **soft delete**.
+
+Do NOT physically remove the record from storage.
+
+Instead:
+
+```ts
+deletedAt
+```
+
+is populated.
+
+And:
+
+```ts
+editingHistory
+```
+
+gets a:
+
+```ts
+DELETED
+```
+
+entry.
+
+Normal GET operations filter out deleted images.
+
+This preserves audit history.
+
+---
+
+# 26. EDITING HISTORY
+
+Every image should have a history.
+
+Creation:
+
+```text
+CREATED
+```
+
+Update:
+
+```text
+UPDATED
+```
+
+Delete:
+
+```text
+DELETED
+```
+
+The history should contain relevant information such as:
+
+* userId
+* userName
+* timestamp
+* previousLink
+* newLink
+
+Do not remove editing history when updating/deleting.
+
+---
+
+# 27. CAMERA REQUIREMENT
+
+Images should be captured using the device camera.
+
+Current library:
+
+```text
+react-native-image-picker
+```
+
+Current behavior uses:
+
+```ts
+launchCamera(...)
+```
+
+Gallery selection is NOT the intended inspection flow.
+
+The user should capture inspection evidence through the camera.
+
+---
+
+# 28. CURRENT INSPECTION UI
+
+Inspection screen currently has:
+
+* Progress header
+* Inspection title
+* Reference image
+* Instructions
+* Take Photo button
+* Captured image preview
+* Retake button (✕)
+* Confirm button (✓)
+* Back/Cancel
+* Complete Inspection
+
+Do not unnecessarily redesign this unless explicitly asked.
+
+---
+
+# 29. IMPORTANT NAVIGATION REQUIREMENT
+
+When implementing inspection updates, navigation must preserve the inspection item.
+
+Example:
+
+```text
+User Home
+    ↓
+Basin image
+    ↓
+Update
+    ↓
+Inspection screen
+    ↓
+currentTask = basin
+```
+
+NOT:
+
+```text
+User Home
+    ↓
+Update
+    ↓
+Inspection screen
+    ↓
+currentTask = washroom
+```
+
+The inspection hook should support an initial task/index or task ID where required.
+
+---
+
+# 30. EXISTING HOOK CONCEPT
+
+The inspection flow is currently managed by:
+
+```text
+src/features/inspection/hooks/useInspectionFlow.ts
+```
+
+It manages things such as:
+
+* currentIndex
+* currentTask
+* progress
+* completed
+* images
+* saving
+* uploadImage
+* loadExistingImages
+* next
+* previous
+* isLastStep
+
+The hook receives:
+
+```ts
+tasks
+roId
+```
+
+If extending it for edit mode, do so carefully without breaking create mode.
+
+---
+
+# 31. API LAYER
+
+Relevant API files include:
+
+```text
+src/core/services/api/inspectionUploadApi.ts
+src/core/services/api/imageUrlGeneratorApi.ts
+src/core/services/api/inspectionTaskApi.ts
+src/core/services/api/masterApi.ts
+src/core/services/api/authApi.ts
+src/core/services/api/otpApi.ts
+```
+
+API exports are maintained through:
+
+```text
+src/core/services/api/index.ts
+```
+
+When adding a new API, follow the same pattern.
+
+---
+
+# 32. MOCK DATA
+
+Relevant mock/data areas include:
+
+```text
+src/data/auth/
+src/data/inspection/
+src/data/master/
+```
+
+For example:
+
+```text
+src/data/inspection/uploads.mock.ts
+```
+
+contains the persistent mock inspection image store.
+
+Inspection task definitions are in the master/inspection task mock data.
+
+---
+
+# 33. MASTER API
+
+The Master API is responsible for outlet hierarchy/master data.
+
+The User Home currently uses:
+
+```ts
+MasterApi.getOutletHierarchy(user.roNumber)
+```
+
+to resolve outlet details.
+
+Do not move master-data logic into screens.
+
+---
+
+# 34. DESIGN PRINCIPLE
+
+Screens should primarily be responsible for:
+
+* Rendering UI
+* User interactions
+* Calling hooks/services
+* Navigation
+* Showing loading/error states
+
+Business/data logic should live in:
+
+* hooks
+* API services
+* mock repositories/data
+
+Avoid putting AsyncStorage/business rules directly inside screens.
+
+---
+
+# 35. ERROR HANDLING
+
+User-facing failures should be handled gracefully.
+
+Examples:
+
+Camera failure:
+
+```text
+Unable to open camera.
+```
+
+No image:
+
+```text
+No image was captured.
+```
+
+Upload failure:
+
+```text
+Unable to save the image. Please try again.
+```
+
+Expired edit window:
+
+```text
+The image editing window has expired.
+```
+
+Do not expose unnecessary internal implementation errors to normal users.
+
+For development/debugging, console logging is acceptable when useful.
+
+---
+
+# 36. CURRENT IMPORTANT KNOWN ISSUE
+
+One known issue from the previous implementation was:
+
+### Update opens wrong inspection item
+
+Example:
+
+Basin → Update → Washroom opens.
+
+Root cause:
+
+Generic navigation to the inspection screen without passing the selected inspection item.
+
+The fix should introduce a way to tell the inspection flow:
+
+```text
+edit this specific inspectionItem
+```
+
+and load that item's existing image.
+
+---
+
+# 37. IMPORTANT CURRENT STATE
+
+The AsyncStorage persistence architecture was recently fixed and tested.
+
+The application successfully supports:
+
+* Uploading images
+* Persisting images
+* Getting images by RO
+* Sharing images between users of the same RO
+* Partial inspection persistence
+* Mock image URL generation
+* User Home displaying persisted images
+
+Treat these as WORKING functionality.
+
+Do not casually rewrite this functionality.
+
+---
+
+# 38. BACKEND FUTURE
+
+The current APIs are intentionally mock implementations.
+
+Eventually:
+
+```text
+InspectionUploadApi
+```
+
+should communicate with a real backend.
+
+Likewise:
+
+```text
+ImageUrlGeneratorApi
+```
+
+will eventually communicate with a real image/storage service.
+
+Therefore, keep service interfaces stable and avoid coupling UI to mock implementation details.
+
+---
+
+# 39. FUTURE AI COMPONENT
+
+AI will eventually process uploaded inspection images.
+
+Conceptually:
+
+Image Upload
+↓
+Image URL
+↓
+AI Processing
+↓
+Inspection/Compliance Result
+↓
+Dashboard
+↓
+Reports & Analytics
+
+But AI integration is NOT the current priority unless I explicitly ask for it.
+
+Do not introduce fake AI functionality unless requested.
+
+---
+
+# 40. ADMIN SIDE
+
+There is an Admin role and an Admin dashboard is planned.
+
+Admin dashboard concepts include:
+
+* Logo
+* Territory header
+* Dynamic filtering
+* Selection hierarchy
+
+The hierarchy is:
+
+Territory
+→ Sales Area
+→ District
+→ Outlet
+
+Admin functionality will evolve later.
+
+Do not let future admin requirements unnecessarily complicate current user inspection functionality.
+
+---
+
+# 41. UI-FIRST APPROACH
+
+The application is being built UI-first.
+
+Backend integration should later be smooth.
+
+Therefore:
+
+* Components should be reusable.
+* API contracts should be explicit.
+* Models should represent backend entities.
+* Mock APIs should imitate realistic backend behavior.
+* Screens should not depend on the implementation of mock storage.
+
+---
+
+# 42. DO NOT OVER-ENGINEER
+
+Avoid introducing:
+
+* Redux unless explicitly requested
+* Zustand unless explicitly requested
+* unnecessary state management
+* unnecessary repositories
+* unnecessary dependency packages
+* unnecessary abstraction layers
+* large architectural rewrites
+
+Prefer the existing:
+
+React Native
++
+TypeScript
++
+Hooks
++
+Context
++
+API services
++
+Mock data
++
+AsyncStorage
+
+architecture.
+
+---
+
+# 43. WHEN I ASK FOR A CHANGE
+
+When I say something like:
+
+"Fix Basin update"
+
+You should:
+
+1. Inspect the relevant existing files.
+2. Determine the current flow.
+3. Identify the root cause.
+4. Modify only what is necessary.
+5. Preserve working upload/persistence behavior.
+6. Check TypeScript compatibility.
+7. Check navigation types.
+8. Tell me exactly which files changed.
+9. Give me complete replacement files when appropriate.
+
+Do not make me manually merge tiny snippets if a complete file replacement is safer.
+
+---
+
+# 44. WHEN THERE IS A BUG
+
+Do not immediately patch the symptom.
+
+First identify:
+
+* Which screen triggered it?
+* Which navigation route?
+* Which hook?
+* Which API?
+* Which data model?
+* Whether async behavior is involved?
+* Whether the issue is caused by persisted state?
+
+Then fix the root cause.
+
+---
+
+# 45. TYPE SAFETY
+
+This is a TypeScript project.
+
+Do not use `any` to silence errors unless the existing architecture genuinely requires it.
+
+Navigation params must be correctly typed.
+
+If a route requires:
+
+```ts
+inspectionItemId
+```
+
+then update the appropriate navigation param list rather than using unsafe casts.
+
+---
+
+# 46. NAVIGATION
+
+The project uses React Navigation.
+
+There are feature-specific navigators such as:
+
+```text
+src/features/inspection/navigation/
+```
+
+Navigation types are important.
+
+Do not use:
+
+```ts
+navigation.navigate('Inspection' as any)
+```
+
+to bypass TypeScript.
+
+Fix the actual navigation type.
+
+---
+
+# 47. DATA FLOW FOR INSPECTION IMAGE
+
+The correct mental model is:
+
+```text
+CAMERA
+  ↓
+InspectionUploadScreen
+  ↓
+useInspectionFlow
+  ↓
+InspectionUploadApi
+  ↓
+ImageUrlGeneratorApi
+  ↓
+InspectionImageUpload record
+  ↓
+AsyncStorage
+```
+
+Reading:
+
+```text
+User Home
+  ↓
+InspectionUploadApi.getImagesByRoId(roId)
+  ↓
+AsyncStorage
+  ↓
+InspectionImageUpload[]
+  ↓
+User Home UI
+```
+
+---
+
+# 48. UPDATE DATA FLOW
+
+Correct update architecture:
+
+```text
+User Home
+  ↓
+select image
+  ↓
+pass inspectionItem + imageId
+  ↓
+Inspection screen in EDIT mode
+  ↓
+load existing image
+  ↓
+camera
+  ↓
+confirm
+  ↓
+InspectionUploadApi.updateImage()
+  ↓
+ImageUrlGeneratorApi
+  ↓
+update existing record
+  ↓
+editingHistory += UPDATED
+```
+
+---
+
+# 49. DELETE DATA FLOW
+
+Correct delete architecture:
+
+```text
+User Home
+  ↓
+select image
+  ↓
+InspectionUploadApi.deleteImage()
+  ↓
+validate RO ownership
+  ↓
+validate edit window
+  ↓
+soft delete
+  ↓
+editingHistory += DELETED
+```
+
+---
+
+# 50. SECURITY/OWNERSHIP RULE
+
+Even though this is currently mock/local:
+
+Update/Delete APIs must verify:
+
+```ts
+existing.roId === request.roId
+```
+
+A user from another RO must not be able to modify an image belonging to another RO.
+
+Keep this check when modifying the API.
+
+---
+
+# 51. IMPORTANT IDENTITY RULE
+
+For image ownership:
+
+```text
+roId = ownership
+```
+
+For audit information:
+
+```text
+userId/userName = who performed the action
+```
+
+Do not confuse these.
+
+---
+
+# 52. LOCAL MOCK STORAGE IS A DATABASE SIMULATION
+
+Treat AsyncStorage mock data as a lightweight local database simulation.
+
+Do not use screen state as the source of truth for persisted inspection images.
+
+For persisted information:
+
+API → AsyncStorage is the source of truth.
+
+Screen state is only a cached/rendering representation.
+
+---
+
+# 53. DO NOT BREAK EXISTING FEATURES
+
+Before changing inspection functionality, assume these are important:
+
+* Login
+* Registration
+* Outlet hierarchy lookup
+* User Home
+* Inspection navigation
+* Camera
+* Upload
+* AsyncStorage persistence
+* Partial inspections
+* RO-based image visibility
+* Update
+* Delete
+* Editing history
+* Edit window
+
+If your change could affect one of these, inspect the relevant implementation first.
+
+---
+
+# 54. CODE QUALITY EXPECTATIONS
+
+Prefer:
+
+* clear variable names
+* small functions
+* explicit types
+* async/await
+* reusable components
+* existing theme constants
+* existing Button/component system
+* existing navigation architecture
+
+Avoid:
+
+* giant components
+* duplicated API logic
+* direct storage calls from screens
+* magic strings when an existing constant/model can be used
+* unnecessary dependencies
+* unsafe navigation casts
+
+---
+
+# 55. VISUAL/UI EXPECTATION
+
+The application should feel like a professional enterprise inspection/compliance application.
+
+UI should be:
+
+* clean
+* modern
+* simple
+* readable
+* practical
+* mobile friendly
+
+Avoid excessive animations or decorative UI unless requested.
+
+The primary focus is usability for employees performing inspections quickly.
+
+---
+
+# 56. IMPORTANT: DO NOT ASSUME THE CONTEXT IS COMPLETE
+
+This document describes the project architecture and major decisions.
+
+The actual repository is the source of truth for:
+
+* exact file contents
+* current navigation types
+* current component implementations
+* current theme values
+* current models
+* current mock data
+* current API implementations
+
+Before making code changes, inspect the relevant files.
+
+If an instruction conflicts with the actual repository, explain the conflict and determine the smallest safe change.
+
+---
+
+# 57. RESPONSE STYLE FOR FUTURE DEVELOPMENT TASKS
+
+When I ask you to implement something, respond practically.
+
+Prefer this format:
+
+### Understanding
+
+Briefly explain what you understood.
+
+### Files affected
+
+List exact files.
+
+### Changes
+
+Explain the implementation briefly.
+
+### Code
+
+Provide complete replacement files when needed.
+
+### Verification
+
+Give exact commands/actions I should run.
+
+Do not give me generic tutorials unless I ask for one.
+
+---
+
+# 58. VERY IMPORTANT
+
+I will give you future instructions incrementally.
+
+Do not assume that every future request requires a new architecture.
+
+Build on the current implementation.
+
+If something already works, preserve it.
+
+If you need to modify an existing file, inspect its current content first.
+
+If you need another file to safely implement a change, explicitly tell me which exact file you need.
+
+---
+
+# 59. CURRENT DEVELOPMENT PRIORITY
+
+The current priority is to continue improving the Cleaner application around:
+
+1. Inspection workflow
+2. Inspection item-specific image handling
+3. Image upload/persistence
+4. Image update/edit
+5. Image deletion
+6. User Home
+7. Inspection compliance checklist
+8. Clean UI/UX
+9. Preparing clean API boundaries for eventual backend integration
+
+AI, backend, analytics and advanced admin functionality will be implemented later.
+
+---
+
+# FINAL INSTRUCTION TO CURSOR
+
+You are working on an EXISTING project.
+
+Do not rebuild Cleaner from scratch.
+
+Do not replace the architecture with your preferred architecture.
+
+Understand the current implementation first.
+
+When I provide a task, work within this architecture and modify only what is necessary.
+
+Always preserve:
+
+* RO-based ownership
+* AsyncStorage persistence
+* partial inspection persistence
+* one-by-one inspection flow
+* camera-only capture
+* immediate image persistence
+* mock API boundaries
+* update/delete audit history
+* edit-window business rule
+* typed navigation
+* TypeScript safety
+
+Most importantly:
+
+**Before changing code, inspect the existing implementation and understand how the requested change fits into the current data flow.**
+
+I will now start giving you individual development instructions.

@@ -58,6 +58,7 @@ type Props =
 
 const InspectionUploadScreen = ({
   navigation,
+  route,
 }: Props) => {
 
   const { user } =
@@ -145,13 +146,14 @@ const InspectionUploadScreen = ({
     useInspectionFlow(
       tasks,
       user?.roNumber,
+      route.params?.inspectionItemId,
     );
 
   //-------------------------------------
 
   useEffect(() => {
-
-    if (!currentTask) {
+    // Only pre-populate capturedImage if the user navigated specifically to edit an item
+    if (!currentTask || !route.params?.inspectionItemId) {
       return;
     }
 
@@ -160,10 +162,10 @@ const InspectionUploadScreen = ({
         currentTask.id
       ],
     );
-
   }, [
     currentTask,
     images,
+    route.params?.inspectionItemId,
   ]);
 
   //-------------------------------------
@@ -262,6 +264,7 @@ const InspectionUploadScreen = ({
         );
 
       if (!success) {
+        console.error('[InspectionUploadScreen] confirmPhoto failed to upload image for task:', currentTask?.id);
 
         Alert.alert(
           'Upload',

@@ -1,3 +1,5 @@
 export type InspectionStackParamList = {
-  InspectionUpload: undefined;
+  InspectionUpload: {
+    inspectionItemId?: string;
+  } | undefined;
 };

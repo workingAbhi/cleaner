@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Alert } from 'react-native';
 
 import {
+  validatePasswordConfirmation,
+  validatePhoneNumber,
+} from '../../../core/constants/authValidation';
+import {
   AuthApi,
   MasterApi,
   OtpApi,
@@ -206,20 +210,16 @@ export default function useUserRegister() {
   const sendPhoneOtp =
     async () => {
 
-      if (
-        !form.phoneNumber.trim()
-      ) {
-
+      const phoneValidation = validatePhoneNumber(form.phoneNumber);
+      if (!phoneValidation.valid) {
         Alert.alert(
           'Phone Number',
-          'Please enter phone number.',
+          phoneValidation.error ?? 'Please enter a valid phone number.',
         );
-
         return;
-
       }
 
-      await OtpApi.sendOtp({
+      const result = await OtpApi.sendOtp({
 
         type:
           OtpType.PHONE,
@@ -233,7 +233,9 @@ export default function useUserRegister() {
 
       Alert.alert(
         'Success',
-        'OTP sent successfully.',
+        result.devOtp
+          ? `OTP sent. Dev code: ${result.devOtp}`
+          : 'OTP sent successfully.',
       );
 
     };
@@ -251,6 +253,9 @@ export default function useUserRegister() {
 
           otp:
             form.phoneOtp,
+
+          destination:
+            form.phoneNumber,
 
         });
 
@@ -274,70 +279,29 @@ export default function useUserRegister() {
   const register =
     async () => {
 
-      if (
-        !outletVerified
-      ) {
-
-        Alert.alert(
-          'Outlet',
-          'Please verify outlet.',
-        );
-
+      if (!outletVerified) {
+        Alert.alert('Outlet', 'Please verify outlet.');
         return false;
-
       }
 
-      if (
-        !form.phoneNumber.trim()
-      ) {
-
-        Alert.alert(
-          'Phone Number',
-          'Please enter phone number.',
-        );
-
+      const phoneValidation = validatePhoneNumber(form.phoneNumber);
+      if (!phoneValidation.valid) {
+        Alert.alert('Phone Number', phoneValidation.error ?? 'Please enter a valid phone number.');
         return false;
-
       }
 
-      if (
-        !form.password
-      ) {
-
-        Alert.alert(
-          'Password',
-          'Please enter password.',
-        );
-
+      const passwordValidation = validatePasswordConfirmation(
+        form.password,
+        form.confirmPassword,
+      );
+      if (!passwordValidation.valid) {
+        Alert.alert('Password', passwordValidation.error ?? 'Please check your password.');
         return false;
-
       }
 
-      if (
-        form.password !==
-        form.confirmPassword
-      ) {
-
-        Alert.alert(
-          'Password',
-          'Passwords do not match.',
-        );
-
+      if (!phoneVerified) {
+        Alert.alert('OTP', 'Please verify phone OTP.');
         return false;
-
-      }
-
-      if (
-        !phoneVerified
-      ) {
-
-        Alert.alert(
-          'OTP',
-          'Please verify phone OTP.',
-        );
-
-        return false;
-
       }
 
       const request:

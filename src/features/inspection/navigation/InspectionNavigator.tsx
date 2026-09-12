@@ -15,12 +15,30 @@ import {
 const Stack =
   createNativeStackNavigator<InspectionStackParamList>();
 
-const InspectionNavigator = () => {
+type Props =
+  NativeStackScreenProps<
+    InspectionStackParamList,
+    'InspectionUpload'
+  >;
+
+const InspectionNavigator = ({
+  route,
+}: {
+  route: {
+    params?: {
+      inspectionItemId?: string;
+    };
+  };
+}) => {
   return (
     <Stack.Navigator>
       <Stack.Screen
         name="InspectionUpload"
         component={InspectionUploadScreen}
+        initialParams={{
+          inspectionItemId:
+            route.params?.inspectionItemId,
+        }}
         options={{
           title: 'Inspection',
         }}

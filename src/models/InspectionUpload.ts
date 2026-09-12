@@ -25,23 +25,42 @@ export interface InspectionImageUpload {
 
   /**
    * Inspection task/item this image belongs to.
+   * App checklist: washroom, basin, ...
+   * Sample photos: ladies, gents, urinal, pq, bathroom.
    */
   inspectionItem: string;
 
   /**
-   * Mock backend-generated image URL.
+   * Washroom facility for field photos.
+   * Null for normal app checklist captures.
+   */
+  facility?: 'ladies' | 'gents' | 'urinal' | 'pq' | 'bathroom';
+
+  /**
+   * inspection = captured in the app (User Home)
+   * sample = Provided_RO_Pics (AI eval only)
+   */
+  kind?: 'inspection' | 'sample';
+
+  /**
+   * Backend image URL.
    *
-   * Example:
-   * https://mock-image.com/image-1.png
+   * Mock: https://image1.png
+   * Supabase: public storage URL
    */
   link: string;
 
   /**
-   * Local camera URI.
-   *
-   * Used only while we don't have real image storage.
+   * Local camera URI while using AsyncStorage mocks.
+   * With Supabase this is usually the same as link.
    */
   imageUri: string;
+
+  /**
+   * Supabase Storage object path.
+   * Empty while using the mock store.
+   */
+  storagePath?: string;
 
   createdAt: string;
   updatedAt: string;
@@ -71,6 +90,8 @@ export interface InspectionImageUpdateRequest {
   imageId: string;
 
   imageUri: string;
+
+  storagePath?: string;
 
   userId?: string;
   userName?: string;

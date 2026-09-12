@@ -7,7 +7,8 @@ export interface User extends BaseEntity {
 
   phoneNumber: string;
 
-  password: string;
+  /** Present only in mock store rows — never returned from Supabase Auth. */
+  password?: string;
 
   role: UserRole;
 

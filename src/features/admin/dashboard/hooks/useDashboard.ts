@@ -1,148 +1,226 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { MasterApi } from '../../../../core/services/api';
+import { MasterApi, InspectionUploadApi, InspectionAnalysisApi } from '../../../../core/services/api';
 
 import {
   Territory,
   SalesArea,
   District,
   Outlet,
+  InspectionImageUpload,
+  AiAnalysis,
 } from '../../../../models';
 
+const withinDays = (iso: string, days: string) => {
+  if (days === 'all') {
+    return true;
+  }
+
+  const created = new Date(iso).getTime();
+  const windowMs = Number(days) * 24 * 60 * 60 * 1000;
+
+  return Date.now() - created <= windowMs;
+};
+
 export default function useDashboard() {
+  const [territories, setTerritories] = useState<Territory[]>([]);
+  const [allSalesAreas, setAllSalesAreas] = useState<SalesArea[]>([]);
+  const [allDistricts, setAllDistricts] = useState<District[]>([]);
+  const [allOutlets, setAllOutlets] = useState<Outlet[]>([]);
 
-  const [territories, setTerritories] =
-    useState<Territory[]>([]);
+  const [territoryId, setTerritoryId] = useState('');
+  const [salesAreaId, setSalesAreaId] = useState('');
+  const [districtId, setDistrictId] = useState('');
+  const [outletId, setOutletId] = useState('');
+  const [days, setDays] = useState('all');
 
-  const [salesAreas, setSalesAreas] =
-    useState<SalesArea[]>([]);
+  const [uploads, setUploads] = useState<InspectionImageUpload[]>([]);
+  const [analyses, setAnalyses] = useState<Record<string, AiAnalysis>>({});
+  const [loading, setLoading] = useState(false);
 
-  const [districts, setDistricts] =
-    useState<District[]>([]);
+  const loadEvidence = useCallback(async () => {
+    try {
+      setLoading(true);
 
-  const [outlets, setOutlets] =
-    useState<Outlet[]>([]);
+      const [images, latest] = await Promise.all([
+        InspectionUploadApi.getAllImages(),
+        InspectionAnalysisApi.getLatestAll(),
+      ]);
 
-  const [territoryId, setTerritoryId] =
-    useState('');
-
-  const [salesAreaId, setSalesAreaId] =
-    useState('');
-
-  const [districtId, setDistrictId] =
-    useState('');
-
-  const [outletId, setOutletId] =
-    useState('');
-
-  const [days, setDays] =
-    useState('1');
-
-  //--------------------------------------------
-
-  useEffect(() => {
-    loadTerritories();
+      setUploads(images);
+      setAnalyses(latest);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  //--------------------------------------------
+  useEffect(() => {
+    const loadMaster = async () => {
+      const [
+        nextTerritories,
+        nextSalesAreas,
+        nextDistricts,
+        nextOutlets,
+      ] = await Promise.all([
+        MasterApi.getTerritories(),
+        MasterApi.getSalesAreas(),
+        MasterApi.getDistricts(),
+        MasterApi.getOutlets(),
+      ]);
 
-  const loadTerritories =
-    async () => {
-
-      const result =
-        await MasterApi.getTerritories();
-
-      setTerritories(result);
-
+      setTerritories(nextTerritories);
+      setAllSalesAreas(nextSalesAreas);
+      setAllDistricts(nextDistricts);
+      setAllOutlets(nextOutlets);
     };
 
-  //--------------------------------------------
+    loadMaster();
+    loadEvidence();
+  }, [loadEvidence]);
 
-  const selectTerritory =
-    async (
-      id: string,
-    ) => {
+  useEffect(() => {
+    const hasPending = Object.values(analyses).some(
+      analysis => analysis.status === 'PROCESSING',
+    );
 
-      setTerritoryId(id);
+    if (!hasPending) {
+      return;
+    }
 
-      setSalesAreaId('');
-      setDistrictId('');
-      setOutletId('');
+    const timer = setInterval(() => {
+      void loadEvidence();
+    }, 4000);
 
-      setDistricts([]);
-      setOutlets([]);
+    return () => clearInterval(timer);
+  }, [analyses, loadEvidence]);
 
-      const result =
-        await MasterApi.getSalesAreas(
-        );
+  const salesAreas = useMemo(
+    () =>
+      territoryId
+        ? allSalesAreas.filter(item => item.territoryId === territoryId)
+        : [],
+    [allSalesAreas, territoryId],
+  );
 
-      setSalesAreas(result);
+  const districts = useMemo(
+    () =>
+      salesAreaId
+        ? allDistricts.filter(item => item.salesAreaId === salesAreaId)
+        : [],
+    [allDistricts, salesAreaId],
+  );
 
-    };
+  const outlets = useMemo(
+    () =>
+      districtId
+        ? allOutlets.filter(item => item.districtId === districtId)
+        : [],
+    [allOutlets, districtId],
+  );
 
-  //--------------------------------------------
+  const selectTerritory = (id: string) => {
+    setTerritoryId(id);
+    setSalesAreaId('');
+    setDistrictId('');
+    setOutletId('');
+  };
 
-  const selectSalesArea =
-    async (
-      id: string,
-    ) => {
+  const selectSalesArea = (id: string) => {
+    setSalesAreaId(id);
+    setDistrictId('');
+    setOutletId('');
+  };
 
-      setSalesAreaId(id);
+  const selectDistrict = (id: string) => {
+    setDistrictId(id);
+    setOutletId('');
+  };
 
-      setDistrictId('');
-      setOutletId('');
+  const clearFilters = () => {
+    setTerritoryId('');
+    setSalesAreaId('');
+    setDistrictId('');
+    setOutletId('');
+    setDays('all');
+  };
 
-      setOutlets([]);
+  const visibleUploads = useMemo(() => {
+    const allowedRos = new Set<string>();
 
-      const result =
-        await MasterApi.getDistricts(
-        );
+    allOutlets.forEach(outlet => {
+      const district = allDistricts.find(item => item.id === outlet.districtId);
+      const salesArea = allSalesAreas.find(
+        item => item.id === district?.salesAreaId,
+      );
 
-      setDistricts(result);
+      if (outletId && outlet.roNumber !== outletId) {
+        return;
+      }
 
-    };
+      if (districtId && outlet.districtId !== districtId) {
+        return;
+      }
 
-  //--------------------------------------------
+      if (salesAreaId && salesArea?.id !== salesAreaId) {
+        return;
+      }
 
-  const selectDistrict =
-    async (
-      id: string,
-    ) => {
+      if (territoryId && salesArea?.territoryId !== territoryId) {
+        return;
+      }
 
-      setDistrictId(id);
+      allowedRos.add(outlet.roNumber);
+    });
 
-      setOutletId('');
+    const filterByHierarchy =
+      Boolean(territoryId || salesAreaId || districtId || outletId);
 
-      const result =
-        await MasterApi.getOutlets(
-        );
+    return uploads.filter(upload => {
+      if (filterByHierarchy && !allowedRos.has(upload.roId)) {
+        return false;
+      }
 
-      setOutlets(result);
+      return withinDays(upload.createdAt, days);
+    });
+  }, [
+    allDistricts,
+    allOutlets,
+    allSalesAreas,
+    days,
+    districtId,
+    outletId,
+    salesAreaId,
+    territoryId,
+    uploads,
+  ]);
 
-    };
-
-  //--------------------------------------------
+  const outletLabel = (roId: string) => {
+    const outlet = allOutlets.find(item => item.roNumber === roId);
+    return outlet
+      ? `${outlet.roNumber} · ${outlet.outletName}`
+      : roId;
+  };
 
   return {
-
     territories,
     salesAreas,
     districts,
     outlets,
-
     territoryId,
     salesAreaId,
     districtId,
     outletId,
     days,
-
-    setOutletId,
     setDays,
-
+    setOutletId,
     selectTerritory,
     selectSalesArea,
     selectDistrict,
-
+    clearFilters,
+    uploads: visibleUploads,
+    analyses,
+    loading,
+    loadEvidence,
+    outletLabel,
   };
-
 }

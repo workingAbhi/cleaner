@@ -6,16 +6,31 @@ import {
 } from '../../../models/InspectionUpload';
 
 import {
-  addInspectionUpload,
-  getInspectionUploads,
-  findInspectionUpload,
-  updateInspectionUpload,
-  deleteInspectionUpload,
+  addInspectionUpload as addMockUpload,
+  getInspectionUploads as getMockUploads,
+  getAllInspectionUploads as getAllMockUploads,
+  findInspectionUpload as findMockUpload,
+  updateInspectionUpload as updateMockUpload,
+  deleteInspectionUpload as deleteMockUpload,
 } from '../../../data/inspection/uploads.mock';
+
+import {
+  addInspectionUpload as addSupabaseUpload,
+  getInspectionUploads as getSupabaseUploads,
+  getAllInspectionUploads as getAllSupabaseUploads,
+  findInspectionUpload as findSupabaseUpload,
+  updateInspectionUpload as updateSupabaseUpload,
+  deleteInspectionUpload as deleteSupabaseUpload,
+  uploadInspectionFile,
+  requestImageAnalysis,
+} from '../../../data/inspection/uploads.supabase';
 
 import ImageUrlGeneratorApi from './imageUrlGeneratorApi';
 
-import { AppConfig } from '../../config/appConfig';
+import {
+  AppConfig,
+  isSupabaseConfigured,
+} from '../../config/appConfig';
 
 /**
  * --------------------------------------------------
@@ -52,6 +67,50 @@ const getEditWindowMs = () => {
     60 *
     1000
   );
+};
+
+const persist = () =>
+  isSupabaseConfigured()
+    ? {
+        add: addSupabaseUpload,
+        get: getSupabaseUploads,
+        getAll: getAllSupabaseUploads,
+        find: findSupabaseUpload,
+        update: updateSupabaseUpload,
+        remove: deleteSupabaseUpload,
+      }
+    : {
+        add: addMockUpload,
+        get: getMockUploads,
+        getAll: getAllMockUploads,
+        find: findMockUpload,
+        update: updateMockUpload,
+        remove: deleteMockUpload,
+      };
+
+const createImageUrl = async (
+  roId: string,
+  inspectionItem: string,
+  imageUri: string,
+): Promise<{ link: string; storagePath?: string }> => {
+  if (isSupabaseConfigured()) {
+    const uploaded = await uploadInspectionFile(
+      roId,
+      inspectionItem,
+      imageUri,
+    );
+
+    return {
+      link: uploaded.publicUrl,
+      storagePath: uploaded.storagePath,
+    };
+  }
+
+  const link = await ImageUrlGeneratorApi.generateUrl(
+    imageUri,
+  );
+
+  return { link };
 };
 
 const isWithinEditWindow = (
@@ -105,8 +164,10 @@ class InspectionUploadApi {
      *
      * https://image1.png
      */
-    const imageUrl =
-      await ImageUrlGeneratorApi.generateUrl(
+    const storedImage =
+      await createImageUrl(
+        request.roId,
+        request.inspectionItem,
         request.imageUri,
       );
 
@@ -120,10 +181,10 @@ class InspectionUploadApi {
      * IMPORTANT:
      *
      * getInspectionUploads() is async
-     * because it reads AsyncStorage.
+     * because it reads AsyncStorage or Supabase.
      */
     const existingImages =
-      await getInspectionUploads(
+      await persist().get(
         request.roId,
       );
 
@@ -135,10 +196,12 @@ class InspectionUploadApi {
       );
 
     /**
-     * If the inspection item already
-     * has an image, use the update path.
+     * If the inspection item already has an active image:
+     * - If within edit window, update the existing record.
+     * - If the edit window has expired (e.g. a previous day's or old inspection),
+     *   create a fresh new upload record for this inspection.
      */
-    if (existing) {
+    if (existing && isWithinEditWindow(existing)) {
       return this.updateImage({
         roId:
           request.roId,
@@ -148,6 +211,9 @@ class InspectionUploadApi {
 
         imageUri:
           request.imageUri,
+
+        storagePath:
+          storedImage.storagePath,
 
         userId:
           request.userId,
@@ -172,18 +238,19 @@ class InspectionUploadApi {
       inspectionItem:
         request.inspectionItem,
 
-      /**
-       * This is the mock backend URL.
-       */
-      link:
-        imageUrl,
+      kind:
+        'inspection',
 
-      /**
-       * Keep the local camera URI for
-       * the current mocked implementation.
-       */
+      link:
+        storedImage.link,
+
       imageUri:
-        request.imageUri,
+        isSupabaseConfigured()
+          ? storedImage.link
+          : request.imageUri,
+
+      storagePath:
+        storedImage.storagePath,
 
       createdAt:
         now,
@@ -212,25 +279,18 @@ class InspectionUploadApi {
             now,
 
           newLink:
-            imageUrl,
+            storedImage.link,
         },
       ],
     };
 
-    /**
-     * --------------------------------------------------
-     * CRITICAL
-     * --------------------------------------------------
-     *
-     * Persist immediately.
-     *
-     * This writes the record into the
-     * AsyncStorage-backed mock database
-     * for this RO.
-     */
-    await addInspectionUpload(
+    await persist().add(
       upload,
     );
+
+    if (isSupabaseConfigured()) {
+      requestImageAnalysis(upload);
+    }
 
     return upload;
   }
@@ -269,11 +329,15 @@ class InspectionUploadApi {
      * mock database.
      */
     const images =
-      await getInspectionUploads(
+      await persist().get(
         roId,
       );
 
     return images;
+  }
+
+  async getAllImages(): Promise<InspectionImageUpload[]> {
+    return persist().getAll();
   }
 
   /**
@@ -294,7 +358,7 @@ class InspectionUploadApi {
      * because it searches AsyncStorage.
      */
     const existing =
-      await findInspectionUpload(
+      await persist().find(
         request.imageId,
       );
 
@@ -329,13 +393,19 @@ class InspectionUploadApi {
       );
     }
 
-    /**
-     * Generate a new mock backend URL.
-     */
-    const imageUrl =
-      await ImageUrlGeneratorApi.generateUrl(
-        request.imageUri,
-      );
+    const storedImage =
+      request.storagePath
+        ? {
+            link:
+              `${AppConfig.supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/inspection-images/${request.storagePath}`,
+            storagePath:
+              request.storagePath,
+          }
+        : await createImageUrl(
+            request.roId,
+            existing.inspectionItem,
+            request.imageUri,
+          );
 
     const now =
       new Date().toISOString();
@@ -346,10 +416,15 @@ class InspectionUploadApi {
       ...existing,
 
       link:
-        imageUrl,
+        storedImage.link,
 
       imageUri:
-        request.imageUri,
+        isSupabaseConfigured()
+          ? storedImage.link
+          : request.imageUri,
+
+      storagePath:
+        storedImage.storagePath,
 
       updatedAt:
         now,
@@ -377,16 +452,13 @@ class InspectionUploadApi {
             existing.link,
 
           newLink:
-            imageUrl,
+            storedImage.link,
         },
       ],
     };
 
-    /**
-     * Persist the update immediately.
-     */
     const success =
-      await updateInspectionUpload(
+      await persist().update(
         existing.id,
         updated,
       );
@@ -395,6 +467,10 @@ class InspectionUploadApi {
       throw new Error(
         'Unable to update inspection image.',
       );
+    }
+
+    if (isSupabaseConfigured()) {
+      requestImageAnalysis(updated);
     }
 
     return updated;
@@ -418,7 +494,7 @@ class InspectionUploadApi {
      * findInspectionUpload is async.
      */
     const existing =
-      await findInspectionUpload(
+      await persist().find(
         request.imageId,
       );
 
@@ -461,7 +537,7 @@ class InspectionUploadApi {
      * AsyncStorage mock database.
      */
     const success =
-      await deleteInspectionUpload(
+      await persist().remove(
         existing.id,
 
         now,

@@ -6,4 +6,7 @@ export interface OtpVerifyRequest {
 
   otp: string;
 
+  /** Required for PHONE OTP when using Supabase Edge Functions. */
+  destination?: string;
+
 }

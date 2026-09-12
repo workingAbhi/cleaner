@@ -4,6 +4,13 @@ export type RootStackParamList = {
   Main: undefined;
 };
 
+export type UserHomeStackParamList = {
+  UserHome: undefined;
+  Inspection: {
+    inspectionItemId?: string;
+  } | undefined;
+};
+
 export type MainTabParamList = {
   Dashboard: undefined;
   Tasks: undefined;

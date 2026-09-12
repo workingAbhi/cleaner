@@ -333,6 +333,31 @@ export const getInspectionUploads =
     );
   };
 
+export const getAllInspectionUploads =
+  async (): Promise<
+    InspectionImageUpload[]
+  > => {
+
+    const roIds =
+      await getStoredRoIds();
+
+    const all: InspectionImageUpload[] =
+      [];
+
+    for (const roId of roIds) {
+      const images =
+        await getInspectionUploads(
+          roId,
+        );
+
+      all.push(
+        ...images,
+      );
+    }
+
+    return all;
+  };
+
 /**
  * --------------------------------------------------
  * UPDATE IMAGE

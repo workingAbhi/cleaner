@@ -8,6 +8,8 @@ export interface UserRegisterRequest {
 
   password: string;
 
+  name?: string;
+
 }
 
 export interface AdminRegisterRequest {

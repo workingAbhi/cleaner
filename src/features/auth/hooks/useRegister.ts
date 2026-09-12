@@ -283,7 +283,7 @@ export default function useRegister() {
 
       }
 
-      await OtpApi.sendOtp({
+      const result = await OtpApi.sendOtp({
 
         type: OtpType.PHONE,
 
@@ -296,7 +296,9 @@ export default function useRegister() {
 
       Alert.alert(
         'Success',
-        'OTP sent successfully.',
+        result.devOtp
+          ? `OTP sent. Dev code: ${result.devOtp}`
+          : 'OTP sent successfully.',
       );
 
     };
@@ -314,6 +316,9 @@ export default function useRegister() {
 
           otp:
             form.phoneOtp,
+
+          destination:
+            form.phoneNumber,
 
         });
 
@@ -337,7 +342,7 @@ export default function useRegister() {
   const sendMasterOtp =
     async () => {
 
-      await OtpApi.sendOtp({
+      const result = await OtpApi.sendOtp({
 
         type:
           OtpType.MASTER,
@@ -348,7 +353,9 @@ export default function useRegister() {
 
       Alert.alert(
         'Success',
-        'Master OTP sent.',
+        result.devOtp
+          ? `Master OTP sent. Dev code: ${result.devOtp}`
+          : 'Master OTP sent.',
       );
 
     };
