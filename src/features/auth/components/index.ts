@@ -1,3 +1,5 @@
+export { default as ApiErrorBanner } from './ApiErrorBanner';
+
 export { default as OutletInfoCard } from './OutletInfoCard';
 
 export { default as RoleSelector } from './RoleSelector';

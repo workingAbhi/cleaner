@@ -94,10 +94,12 @@ export const invokeFunction = async <T = unknown>(
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    const p = payload as { error?: string; detail?: string };
     const message =
-      (payload as { error?: string }).error ||
-      `Function ${name} failed (${response.status}).`;
-    throw new Error(message);
+      p.error || `Function ${name} failed (${response.status}).`;
+    const detail = p.detail ? ` Detail: ${p.detail}` : '';
+    console.error(`[invokeFunction] ${name} error:`, message, detail, payload);
+    throw new Error(message + detail);
   }
 
   return payload as T;

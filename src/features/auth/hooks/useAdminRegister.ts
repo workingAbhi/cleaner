@@ -55,6 +55,17 @@ export default function useAdminRegister() {
   //--------------------------------------------------
 
   const [
+    apiError,
+    setApiError,
+  ] =
+    useState<string | null>(null);
+
+  const clearError = () =>
+    setApiError(null);
+
+  //--------------------------------------------------
+
+  const [
     loading,
     setLoading,
   ] =
@@ -146,24 +157,38 @@ export default function useAdminRegister() {
         return;
       }
 
-      const result = await OtpApi.sendOtp({
+      try {
 
-        type:
-          OtpType.PHONE,
+        clearError();
 
-        destination:
-          form.phoneNumber,
+        const result = await OtpApi.sendOtp({
 
-      });
+          type:
+            OtpType.PHONE,
 
-      setPhoneOtpSent(true);
+          destination:
+            form.phoneNumber,
 
-      Alert.alert(
-        'Success',
-        result.devOtp
-          ? `OTP sent. Dev code: ${result.devOtp}`
-          : 'OTP sent successfully.',
-      );
+        });
+
+        setPhoneOtpSent(true);
+
+        Alert.alert(
+          'Success',
+          result.devOtp
+            ? `OTP sent. Dev code: ${result.devOtp}`
+            : 'OTP sent successfully.',
+        );
+
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to send phone OTP.',
+        );
+
+      }
 
     };
 
@@ -172,32 +197,46 @@ export default function useAdminRegister() {
   const verifyPhoneOtp =
     async () => {
 
-      const verified =
-        await OtpApi.verifyOtp({
+      try {
 
-          type:
-            OtpType.PHONE,
+        clearError();
 
-          otp:
-            form.phoneOtp,
+        const verified =
+          await OtpApi.verifyOtp({
 
-          destination:
-            form.phoneNumber,
+            type:
+              OtpType.PHONE,
 
-        });
+            otp:
+              form.phoneOtp,
 
-      if (!verified) {
+            destination:
+              form.phoneNumber,
 
-        Alert.alert(
-          'Invalid OTP',
-          'Please enter valid OTP.',
+          });
+
+        if (!verified) {
+
+          Alert.alert(
+            'Invalid OTP',
+            'Please enter valid OTP.',
+          );
+
+          return;
+
+        }
+
+        setPhoneVerified(true);
+
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to verify phone OTP.',
         );
 
-        return;
-
       }
-
-      setPhoneVerified(true);
 
     };
 
@@ -206,21 +245,35 @@ export default function useAdminRegister() {
   const sendMasterOtp =
     async () => {
 
-      const result = await OtpApi.sendOtp({
+      try {
 
-        type:
-          OtpType.MASTER,
+        clearError();
 
-      });
+        const result = await OtpApi.sendOtp({
 
-      setMasterOtpSent(true);
+          type:
+            OtpType.MASTER,
 
-      Alert.alert(
-        'Success',
-        result.devOtp
-          ? `Master OTP sent to ${result.maskedPhone ?? 'owner'}. Dev code: ${result.devOtp}`
-          : `Master OTP sent to ${result.maskedPhone ?? 'owner'}.`,
-      );
+        });
+
+        setMasterOtpSent(true);
+
+        Alert.alert(
+          'Success',
+          result.devOtp
+            ? `Master OTP sent to ${result.maskedPhone ?? 'owner'}. Dev code: ${result.devOtp}`
+            : `Master OTP sent to ${result.maskedPhone ?? 'owner'}.`,
+        );
+
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to send master OTP.',
+        );
+
+      }
 
     };
 
@@ -229,29 +282,43 @@ export default function useAdminRegister() {
   const verifyMasterOtp =
     async () => {
 
-      const verified =
-        await OtpApi.verifyOtp({
+      try {
 
-          type:
-            OtpType.MASTER,
+        clearError();
 
-          otp:
-            form.masterOtp,
+        const verified =
+          await OtpApi.verifyOtp({
 
-        });
+            type:
+              OtpType.MASTER,
 
-      if (!verified) {
+            otp:
+              form.masterOtp,
 
-        Alert.alert(
-          'Invalid OTP',
-          'Please enter valid Master OTP.',
+          });
+
+        if (!verified) {
+
+          Alert.alert(
+            'Invalid OTP',
+            'Please enter valid Master OTP.',
+          );
+
+          return;
+
+        }
+
+        setMasterVerified(true);
+
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to verify master OTP.',
         );
 
-        return;
-
       }
-
-      setMasterVerified(true);
 
     };
 
@@ -305,6 +372,8 @@ export default function useAdminRegister() {
 
       try {
 
+        clearError();
+
         setLoading(true);
 
         await AuthApi.registerAdmin(
@@ -312,6 +381,16 @@ export default function useAdminRegister() {
         );
 
         return true;
+
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Registration failed. Please try again.',
+        );
+
+        return false;
 
       } finally {
 
@@ -330,6 +409,10 @@ export default function useAdminRegister() {
     updateField,
 
     loading,
+
+    apiError,
+
+    clearError,
 
     phoneOtpSent,
 

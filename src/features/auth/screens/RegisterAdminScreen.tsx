@@ -18,6 +18,7 @@ import {
 import { AuthValidationRules } from '../../../core/constants/authValidation';
 
 import {
+  ApiErrorBanner,
   OtpVerificationField,
   VerifyButton,
 } from '../components';
@@ -39,6 +40,10 @@ const RegisterAdminScreen = ({
     updateField,
 
     loading,
+
+    apiError,
+
+    clearError,
 
     phoneOtpSent,
 
@@ -65,31 +70,41 @@ const RegisterAdminScreen = ({
   const onRegister =
     async () => {
 
-      const success =
-        await register();
+      try {
 
-      if (!success) {
-        return;
+        const success = await register();
+
+        if (!success) {
+          return;
+        }
+
+        Alert.alert(
+
+          'Registration Successful',
+
+          'Administrator account created successfully.',
+
+          [
+            {
+              text: 'OK',
+
+              onPress: () =>
+                navigation.replace(
+                  'Login',
+                ),
+            },
+          ],
+
+        );
+
+      } catch (err) {
+
+        // Safety net — should never reach here since the hook
+        // catches all errors internally, but prevents any
+        // unhandled promise rejection from surfacing.
+        console.error('[RegisterAdminScreen] unexpected error:', err);
+
       }
-
-      Alert.alert(
-
-        'Registration Successful',
-
-        'Administrator account created successfully.',
-
-        [
-          {
-            text: 'OK',
-
-            onPress: () =>
-              navigation.replace(
-                'Login',
-              ),
-          },
-        ],
-
-      );
 
     };
 
@@ -110,6 +125,12 @@ const RegisterAdminScreen = ({
       <Text style={styles.title}>
         Administrator Registration
       </Text>
+
+      {/* Error dialog — Modal manages its own visibility via `message` prop */}
+      <ApiErrorBanner
+        message={apiError}
+        onDismiss={clearError}
+      />
 
       {/* -------------------------------- */}
 

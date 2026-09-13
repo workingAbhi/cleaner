@@ -49,6 +49,17 @@ export default function useUserRegister() {
   //--------------------------------------------------
 
   const [
+    apiError,
+    setApiError,
+  ] =
+    useState<string | null>(null);
+
+  const clearError = () =>
+    setApiError(null);
+
+  //--------------------------------------------------
+
+  const [
     hierarchy,
     setHierarchy,
   ] =
@@ -169,6 +180,8 @@ export default function useUserRegister() {
 
       try {
 
+        clearError();
+
         setFindingOutlet(true);
 
         const result =
@@ -197,6 +210,16 @@ export default function useUserRegister() {
 
         return true;
 
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to verify outlet.',
+        );
+
+        return false;
+
       } finally {
 
         setFindingOutlet(false);
@@ -219,24 +242,38 @@ export default function useUserRegister() {
         return;
       }
 
-      const result = await OtpApi.sendOtp({
+      try {
 
-        type:
-          OtpType.PHONE,
+        clearError();
 
-        destination:
-          form.phoneNumber,
+        const result = await OtpApi.sendOtp({
 
-      });
+          type:
+            OtpType.PHONE,
 
-      setPhoneOtpSent(true);
+          destination:
+            form.phoneNumber,
 
-      Alert.alert(
-        'Success',
-        result.devOtp
-          ? `OTP sent. Dev code: ${result.devOtp}`
-          : 'OTP sent successfully.',
-      );
+        });
+
+        setPhoneOtpSent(true);
+
+        Alert.alert(
+          'Success',
+          result.devOtp
+            ? `OTP sent. Dev code: ${result.devOtp}`
+            : 'OTP sent successfully.',
+        );
+
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to send phone OTP.',
+        );
+
+      }
 
     };
 
@@ -245,32 +282,46 @@ export default function useUserRegister() {
   const verifyPhoneOtp =
     async () => {
 
-      const verified =
-        await OtpApi.verifyOtp({
+      try {
 
-          type:
-            OtpType.PHONE,
+        clearError();
 
-          otp:
-            form.phoneOtp,
+        const verified =
+          await OtpApi.verifyOtp({
 
-          destination:
-            form.phoneNumber,
+            type:
+              OtpType.PHONE,
 
-        });
+            otp:
+              form.phoneOtp,
 
-      if (!verified) {
+            destination:
+              form.phoneNumber,
 
-        Alert.alert(
-          'Invalid OTP',
-          'Please enter valid OTP.',
+          });
+
+        if (!verified) {
+
+          Alert.alert(
+            'Invalid OTP',
+            'Please enter valid OTP.',
+          );
+
+          return;
+
+        }
+
+        setPhoneVerified(true);
+
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Failed to verify phone OTP.',
         );
 
-        return;
-
       }
-
-      setPhoneVerified(true);
 
     };
 
@@ -320,6 +371,8 @@ export default function useUserRegister() {
 
       try {
 
+        clearError();
+
         setLoading(true);
 
         await AuthApi.registerUser(
@@ -327,6 +380,16 @@ export default function useUserRegister() {
         );
 
         return true;
+
+      } catch (err) {
+
+        setApiError(
+          err instanceof Error
+            ? err.message
+            : 'Registration failed. Please try again.',
+        );
+
+        return false;
 
       } finally {
 
@@ -347,6 +410,10 @@ export default function useUserRegister() {
     hierarchy,
 
     loading,
+
+    apiError,
+
+    clearError,
 
     findingOutlet,
 

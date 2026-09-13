@@ -18,6 +18,7 @@ import {
 import { AuthValidationRules } from '../../../core/constants/authValidation';
 
 import {
+  ApiErrorBanner,
   OutletInfoCard,
   OtpVerificationField,
   VerifyButton,
@@ -41,6 +42,8 @@ const RegisterUserScreen = ({
     hierarchy,
 
     loading,
+    apiError,
+    clearError,
     findingOutlet,
 
     outletVerified,
@@ -63,31 +66,40 @@ const RegisterUserScreen = ({
   const onRegister =
     async () => {
 
-      const success =
-        await register();
+      try {
 
-      if (!success) {
-        return;
+        const success = await register();
+
+        if (!success) {
+          return;
+        }
+
+        Alert.alert(
+
+          'Registration Successful',
+
+          'Outlet account created successfully.',
+
+          [
+            {
+              text: 'OK',
+
+              onPress: () =>
+                navigation.replace(
+                  'Login',
+                ),
+            },
+          ],
+
+        );
+
+      } catch (err) {
+
+        // Safety net — prevents unhandled promise rejection;
+        // hook should have already set apiError.
+        console.error('[RegisterUserScreen] unexpected error:', err);
+
       }
-
-      Alert.alert(
-
-        'Registration Successful',
-
-        'Outlet account created successfully.',
-
-        [
-          {
-            text: 'OK',
-
-            onPress: () =>
-              navigation.replace(
-                'Login',
-              ),
-          },
-        ],
-
-      );
 
     };
 
@@ -110,6 +122,12 @@ const RegisterUserScreen = ({
       <Text style={styles.title}>
         Outlet Registration
       </Text>
+
+      {/* Error dialog — Modal manages its own visibility via `message` prop */}
+      <ApiErrorBanner
+        message={apiError}
+        onDismiss={clearError}
+      />
 
       {/* -------------------------------- */}
 
