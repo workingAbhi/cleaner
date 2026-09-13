@@ -38,8 +38,7 @@ const statusText = (analysis?: AiAnalysis) => {
   }
 
   if (analysis.status === 'FAILED') {
-    return analysis.analysisJson.error ??
-      'AI Analysis: Failed. Add GEMINI_API_KEY and recapture.';
+    return analysis.analysisJson.error ?? 'AI Analysis: Pending model integration.';
   }
 
   const score = analysis.score ?? analysis.analysisJson.score;

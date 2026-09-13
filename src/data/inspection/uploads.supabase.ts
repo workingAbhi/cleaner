@@ -415,19 +415,27 @@ export const requestImageAnalysis = async (
 
     if (!response.ok) {
       const detail = await parseError(response);
+      console.error('[requestImageAnalysis] Edge function analyze-image returned error:', response.status, detail);
       Logger.warn('AI analysis failed:', detail);
-      await failAnalysis(
-        pending.id,
-        'AI is not ready yet. Add GEMINI_API_KEY on the Edge Function, then recapture.',
-      );
+      let errMsg = 'AI Analysis failed.';
+      try {
+        const parsed = JSON.parse(detail);
+        errMsg = parsed.error || parsed.message || detail;
+      } catch {
+        errMsg = detail || 'AI analysis failed.';
+      }
+      await failAnalysis(pending.id, errMsg);
+    } else {
+      console.log('[requestImageAnalysis] AI analysis completed successfully.');
     }
   } catch (error) {
+    console.error('[requestImageAnalysis] Network or invocation error:', error);
     Logger.warn('AI analysis request failed:', error);
 
     if (analysisId) {
       await failAnalysis(
         analysisId,
-        'Unable to start AI analysis. Check the analyze-image function.',
+        error instanceof Error ? error.message : 'Unable to connect to AI analysis function.',
       );
     }
   }

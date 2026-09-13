@@ -70,14 +70,12 @@ Deploy (CLI or Dashboard paste) these functions from `supabase/functions/`:
 | `send-master-otp` | Admin top-phone OTP |
 | `verify-master-otp` | Verify master OTP |
 | `register` | Create Auth user after OTPs verified |
-| `analyze-image` | Gemini analysis (no AI in the app) |
+| `analyze-image` | Image analysis pipeline |
 
 ### Secrets (Dashboard → Edge Functions → Secrets)
 
 | Secret | Required |
 |--------|----------|
-| `GEMINI_API_KEY` | Yes for AI |
-| `GEMINI_MODEL` | Optional (default `gemini-2.5-flash`) |
 | `OTP_PEPPER` | Yes (random string) |
 | `TWILIO_ACCOUNT_SID` | Yes for real SMS |
 | `TWILIO_AUTH_TOKEN` | Yes for real SMS |
@@ -95,7 +93,7 @@ supabase functions deploy send-master-otp
 supabase functions deploy verify-master-otp
 supabase functions deploy register
 supabase functions deploy analyze-image
-supabase secrets set GEMINI_API_KEY=... OTP_PEPPER=... OTP_DEV_MODE=true
+supabase secrets set OTP_PEPPER="your-random-string" OTP_DEV_MODE=true
 ```
 
 ## 6. Auth model
@@ -108,7 +106,7 @@ supabase secrets set GEMINI_API_KEY=... OTP_PEPPER=... OTP_DEV_MODE=true
 
 ## 7. End-to-end smoke test (emulator)
 
-1. Run schema + `schema_auth.sql`, push master phone, deploy functions, set secrets (`OTP_DEV_MODE=true` until Twilio is ready; set `GEMINI_API_KEY`).
+1. Run schema + `schema_auth.sql`, push master phone, deploy functions, set secrets (`OTP_DEV_MODE=true` until Twilio is ready).
 2. Rebuild app with `.env` filled.
 3. **User:** Register (note Dev OTP alert) → Login → Start Inspection → capture → confirm.
 4. Supabase: row in `inspection_images`, file in Storage, `ai_analyses` PROCESSING → COMPLETED.
