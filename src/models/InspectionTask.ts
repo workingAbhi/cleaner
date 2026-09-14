@@ -4,7 +4,7 @@ export interface InspectionTask {
 
   title: string;
 
-  image: any;
+  imageUrl: string;
 
   instructions: string[];
 

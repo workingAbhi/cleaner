@@ -12,6 +12,8 @@ import {
   View,
 } from 'react-native';
 
+import { Shimmer } from '../../home/components';
+
 import {
   launchCamera,
   CameraOptions,
@@ -83,6 +85,11 @@ const InspectionUploadScreen = ({
     string | undefined
   >(undefined);
 
+  const [
+    imageLoading,
+    setImageLoading,
+  ] = useState(false);
+
   //-------------------------------------
 
   useEffect(() => {
@@ -104,9 +111,15 @@ const InspectionUploadScreen = ({
           await InspectionTaskApi
             .getTasks();
 
-        setTasks(
-          result,
-        );
+        setTasks(result);
+
+        // Prefetch all reference images into RN's image cache so
+        // navigating between tasks shows them instantly.
+        result.forEach(task => {
+          if (task.imageUrl) {
+            Image.prefetch(task.imageUrl).catch(() => {});
+          }
+        });
 
       } catch {
 
@@ -148,6 +161,14 @@ const InspectionUploadScreen = ({
       user?.roNumber,
       route.params?.inspectionItemId,
     );
+
+  //-------------------------------------
+
+  // Reset image loading state each time the task changes so the shimmer
+  // fires for every new reference image.
+  useEffect(() => {
+    setImageLoading(true);
+  }, [currentTask?.id]);
 
   //-------------------------------------
 
@@ -448,18 +469,32 @@ const InspectionUploadScreen = ({
 
       </Text>
 
-      {currentTask.image && (
+      {currentTask.imageUrl ? (
 
-        <Image
-          source={
-            currentTask.image
-          }
-          style={
-            styles.referenceImage
-          }
-        />
+        <View style={styles.referenceImageWrap}>
 
-      )}
+          {imageLoading && (
+            <Shimmer
+              width="100%"
+              height={230}
+              borderRadius={12}
+              style={styles.referenceImageShimmer}
+            />
+          )}
+
+          <Image
+            source={{ uri: currentTask.imageUrl }}
+            style={[
+              styles.referenceImage,
+              imageLoading && styles.referenceImageHidden,
+            ]}
+            onLoadStart={() => setImageLoading(true)}
+            onLoadEnd={() => setImageLoading(false)}
+          />
+
+        </View>
+
+      ) : null}
 
       <View
         style={

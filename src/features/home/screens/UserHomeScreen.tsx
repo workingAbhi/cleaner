@@ -55,6 +55,7 @@ import {
 } from '../../inspection/components';
 
 import {
+  InspectionPhotoCardSkeleton,
   SectionHeader,
 } from '../components';
 
@@ -289,13 +290,21 @@ const UserHomeScreen = () => {
         <SectionHeader
           title="Uploaded Photos"
           subtitle={
-            loadingImages
-              ? 'Loading photos...'
-              : uploads.length > 0
-                ? 'Photos uploaded for this RO.'
+            uploads.length > 0
+              ? 'Photos uploaded for this RO.'
+              : loadingImages
+                ? 'Fetching photos...'
                 : 'No inspection photos uploaded yet.'
           }
         />
+
+        {loadingImages && uploads.length === 0 && (
+          <>
+            <InspectionPhotoCardSkeleton />
+            <InspectionPhotoCardSkeleton />
+            <InspectionPhotoCardSkeleton />
+          </>
+        )}
 
         {uploads.map(
           upload => (

@@ -156,19 +156,34 @@ export default StyleSheet.create({
   // REFERENCE IMAGE
   //-------------------------------------
 
+  referenceImageWrap: {
+
+    width: '100%',
+    marginBottom: 24,
+    minHeight: 230,
+
+  },
+
   referenceImage: {
 
-    width:
-      '100%',
+    width: '100%',
 
-    height:
-      230,
+    height: 230,
 
-    resizeMode:
-      'contain',
+    resizeMode: 'contain',
 
-    marginBottom:
-      24,
+  },
+
+  referenceImageHidden: {
+
+    opacity: 0,
+    height: 0,
+
+  },
+
+  referenceImageShimmer: {
+
+    width: '100%',
 
   },
 
